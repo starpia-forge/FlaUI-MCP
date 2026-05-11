@@ -52,6 +52,28 @@ public class ElementRegistry
     private readonly object _sync = new();
 
     /// <summary>
+    /// Register a test entry without a real AutomationElement (for unit tests only).
+    /// </summary>
+    internal string RegisterForTest(string windowHandle, string? autoId = null,
+        string? name = null, ControlType ct = ControlType.Custom)
+    {
+        lock (_sync)
+        {
+            if (!_windowCounters.ContainsKey(windowHandle)) _windowCounters[windowHandle] = 0;
+            var refId = $"{windowHandle}e{++_windowCounters[windowHandle]}";
+            _entries[refId] = new Entry
+            {
+                Element = null!,
+                WindowHandle = windowHandle,
+                AutomationId = autoId,
+                Name = name,
+                ControlType = ct
+            };
+            return refId;
+        }
+    }
+
+    /// <summary>
     /// Register an element and return its ref, capturing locator metadata.
     /// </summary>
     public string Register(string windowHandle, AutomationElement element)

@@ -88,52 +88,53 @@ public class SnapshotBuilder
         return string.Join(" ", parts);
     }
 
+    internal static string GetElementRole(ControlType controlType) => controlType switch
+    {
+        ControlType.Button => "button",
+        ControlType.Edit => "textbox",
+        ControlType.Text => "text",
+        ControlType.CheckBox => "checkbox",
+        ControlType.RadioButton => "radio",
+        ControlType.ComboBox => "combobox",
+        ControlType.List => "list",
+        ControlType.ListItem => "listitem",
+        ControlType.Menu => "menu",
+        ControlType.MenuItem => "menuitem",
+        ControlType.MenuBar => "menubar",
+        ControlType.Tree => "tree",
+        ControlType.TreeItem => "treeitem",
+        ControlType.Tab => "tablist",
+        ControlType.TabItem => "tab",
+        ControlType.Table => "table",
+        ControlType.DataItem => "row",
+        ControlType.Header => "header",
+        ControlType.HeaderItem => "columnheader",
+        ControlType.Slider => "slider",
+        ControlType.Spinner => "spinbutton",
+        ControlType.ProgressBar => "progressbar",
+        ControlType.Hyperlink => "link",
+        ControlType.Image => "image",
+        ControlType.Pane => "group",
+        ControlType.Group => "group",
+        ControlType.Window => "window",
+        ControlType.Document => "document",
+        ControlType.ToolBar => "toolbar",
+        ControlType.ToolTip => "tooltip",
+        ControlType.ScrollBar => "scrollbar",
+        ControlType.StatusBar => "status",
+        ControlType.Separator => "separator",
+        ControlType.Thumb => "thumb",
+        ControlType.TitleBar => "titlebar",
+        ControlType.DataGrid => "grid",
+        ControlType.Custom => "custom",
+        _ => "element"
+    };
+
     private string GetElementRole(AutomationElement element)
     {
         try
         {
-            var controlType = element.Properties.ControlType.ValueOrDefault;
-            return controlType switch
-            {
-                ControlType.Button => "button",
-                ControlType.Edit => "textbox",
-                ControlType.Text => "text",
-                ControlType.CheckBox => "checkbox",
-                ControlType.RadioButton => "radio",
-                ControlType.ComboBox => "combobox",
-                ControlType.List => "list",
-                ControlType.ListItem => "listitem",
-                ControlType.Menu => "menu",
-                ControlType.MenuItem => "menuitem",
-                ControlType.MenuBar => "menubar",
-                ControlType.Tree => "tree",
-                ControlType.TreeItem => "treeitem",
-                ControlType.Tab => "tablist",
-                ControlType.TabItem => "tab",
-                ControlType.Table => "table",
-                ControlType.DataItem => "row",
-                ControlType.Header => "header",
-                ControlType.HeaderItem => "columnheader",
-                ControlType.Slider => "slider",
-                ControlType.Spinner => "spinbutton",
-                ControlType.ProgressBar => "progressbar",
-                ControlType.Hyperlink => "link",
-                ControlType.Image => "image",
-                ControlType.Pane => "group",
-                ControlType.Group => "group",
-                ControlType.Window => "window",
-                ControlType.Document => "document",
-                ControlType.ToolBar => "toolbar",
-                ControlType.ToolTip => "tooltip",
-                ControlType.ScrollBar => "scrollbar",
-                ControlType.StatusBar => "status",
-                ControlType.Separator => "separator",
-                ControlType.Thumb => "thumb",
-                ControlType.TitleBar => "titlebar",
-                ControlType.DataGrid => "grid",
-                ControlType.Custom => "custom",
-                _ => "element"
-            };
+            return GetElementRole(element.Properties.ControlType.ValueOrDefault);
         }
         catch
         {
@@ -246,7 +247,7 @@ public class SnapshotBuilder
         return false;
     }
 
-    private string EscapeName(string name)
+    internal static string EscapeName(string name)
     {
         return name
             .Replace("\\", "\\\\")
