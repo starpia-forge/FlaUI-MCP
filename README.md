@@ -2,9 +2,12 @@
 
 An MCP (Model Context Protocol) server that enables AI agents to automate Windows desktop applications using accessibility APIs - the same way Playwright automates browsers.
 
-[![Build](https://github.com/starpia-forge/FlaUI-MCP/actions/workflows/build.yml/badge.svg)](https://github.com/starpia-forge/FlaUI-MCP/actions/workflows/build.yml)
+[![CI](https://github.com/starpia-forge/FlaUI-MCP/actions/workflows/build.yml/badge.svg)](https://github.com/starpia-forge/FlaUI-MCP/actions/workflows/build.yml)
+[![CD](https://github.com/starpia-forge/FlaUI-MCP/actions/workflows/release.yml/badge.svg)](https://github.com/starpia-forge/FlaUI-MCP/actions/workflows/release.yml)
 [![GitHub release](https://img.shields.io/github/v/release/starpia-forge/FlaUI-MCP)](https://github.com/starpia-forge/FlaUI-MCP/releases)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
+
+> **Fork notice** — This repository is a fork of [shanselman/FlaUI-MCP](https://github.com/shanselman/FlaUI-MCP). It diverges from upstream with stability fixes (HWND-based window detection for UWP and localized titles, auto-wait/retry executor, handle/GDI leak fixes, JSON-RPC 2.0 / MCP spec compliance), a multi-arch CI/CD pipeline (win-x64 + win-arm64) driven by semantic-release, and an xUnit test suite. See [Changes from upstream](#changes-from-upstream) for details.
 
 ## Why This Exists
 
@@ -55,7 +58,16 @@ Agent: Calculate 3 × 3
 
 ### Download Release
 
-Download the latest release from [Releases](https://github.com/shanselman/FlaUI-MCP/releases) and extract to a folder.
+Grab the latest build from [Releases](https://github.com/starpia-forge/FlaUI-MCP/releases). Four artifacts are published per release:
+
+| Artifact | When to choose |
+|---|---|
+| `FlaUI-MCP-win-x64-<v>-self-contained.zip` | Intel/AMD 64-bit Windows, no .NET install required |
+| `FlaUI-MCP-win-x64-<v>-framework-dependent.zip` | Intel/AMD 64-bit Windows, .NET 8 runtime already installed |
+| `FlaUI-MCP-win-arm64-<v>-self-contained.zip` | ARM64 Windows (Surface Pro X, Copilot+ PCs), no .NET install required |
+| `FlaUI-MCP-win-arm64-<v>-framework-dependent.zip` | ARM64 Windows, .NET 8 runtime already installed |
+
+Extract the ZIP to any folder; the executable is `FlaUI.Mcp.exe`.
 
 ### Configure MCP Client
 
@@ -137,7 +149,7 @@ FlaUI-MCP uses accessibility because it's what screen readers use - it's designe
 
 ```powershell
 # Clone
-git clone https://github.com/shanselman/FlaUI-MCP.git
+git clone https://github.com/starpia-forge/FlaUI-MCP.git
 cd FlaUI-MCP
 
 # Build
@@ -152,6 +164,33 @@ dotnet run --project src/FlaUI.Mcp
 ```powershell
 dotnet test FlaUI.Mcp.sln
 ```
+
+Unit tests live under `tests/FlaUI.Mcp.Tests/` (xUnit) and cover `ElementRegistry` and `SnapshotBuilder` helpers. The CI workflow runs them automatically for the `win-x64` matrix leg.
+
+## Changes from upstream
+
+This fork diverges from [shanselman/FlaUI-MCP](https://github.com/shanselman/FlaUI-MCP) in four areas:
+
+**Stability & correctness**
+- HWND-diff window detection — `windows_launch` now identifies the new window by comparing top-level HWNDs before and after process start, instead of by title substring. This is required for UWP apps (Calculator launches via `ApplicationFrameHost.exe`) and for non-English Windows where the localized title (e.g. `계산기`) never matches the English filename.
+- Auto-wait & stale-element retry — `ActionExecutor` re-resolves stored locators when UI Automation throws `ElementNotAvailable` / `NoClickablePoint` / `UIA_E_ELEMENTNOTAVAILABLE`, with a configurable timeout (default 5 s).
+- JSON-RPC 2.0 / MCP spec compliance fixes (notification handling, error envelopes).
+- Handle leak, GDI leak, and thread-safety fixes around session and window registration.
+
+**Build & release pipeline**
+- `CI` (`.github/workflows/build.yml`) — runs on every branch push and PR. Matrix build for `win-x64` + `win-arm64`, plus xUnit tests on the x64 leg.
+- `CD` (`.github/workflows/release.yml`) — runs on `main` only. Uses [semantic-release](https://semantic-release.gitbook.io/) (`.releaserc.json`) to read Conventional Commits, decide the next version, tag it, and publish a GitHub release with all four ZIPs attached.
+- `GitVersion.yml` supplies SemVer-compatible assembly versions to in-progress builds.
+
+**Project layout**
+- Solution file (`FlaUI.Mcp.sln`) added; source folder renamed from `src/PlaywrightWindows.Mcp` to `src/FlaUI.Mcp`; namespace renamed from `PlaywrightWindows.Mcp` to `FlaUI.Mcp`.
+
+**Tests**
+- `tests/FlaUI.Mcp.Tests/` added with xUnit coverage for `ElementRegistry` and `SnapshotBuilder` helpers.
+
+### Contributing to this fork
+
+Commits on `main` must follow [Conventional Commits](https://www.conventionalcommits.org/) — `feat:` triggers a minor release, `fix:` triggers a patch release, and `BREAKING CHANGE:` in the body triggers a major release. Anything else (`chore:`, `docs:`, `ci:`, `refactor:`, `test:`) is shipped silently with no release.
 
 ## Architecture
 
@@ -198,6 +237,7 @@ MIT License - see [LICENSE](LICENSE) for details.
 
 ## Acknowledgments
 
+- [shanselman/FlaUI-MCP](https://github.com/shanselman/FlaUI-MCP) — The upstream project this fork is built on
 - [FlaUI](https://github.com/FlaUI/FlaUI) - The excellent .NET UI Automation library this project is built on
 - [Playwright](https://playwright.dev/) - Inspiration for the snapshot/ref interaction model
 - [Model Context Protocol](https://modelcontextprotocol.io/) - The protocol that makes this possible
