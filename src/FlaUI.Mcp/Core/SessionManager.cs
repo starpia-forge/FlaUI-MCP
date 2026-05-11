@@ -13,6 +13,8 @@ public class SessionManager : IDisposable
     private readonly UIA3Automation _automation;
     private readonly Dictionary<string, FlaUIApplication> _applications = new();
     private readonly Dictionary<string, Window> _windows = new();
+    private readonly Dictionary<IntPtr, string> _hwndToHandle = new();
+    private readonly object _sync = new();
     private int _appCounter = 0;
     private int _windowCounter = 0;
 
@@ -25,50 +27,46 @@ public class SessionManager : IDisposable
 
     public (string handle, Window window) LaunchApp(string appPath, string[]? args = null)
     {
-        // Use Process.Start for more reliable launching
         var psi = new System.Diagnostics.ProcessStartInfo
         {
             FileName = appPath,
             Arguments = args != null ? string.Join(" ", args) : "",
             UseShellExecute = true
         };
-        
+
         var process = System.Diagnostics.Process.Start(psi);
         if (process == null)
         {
             throw new Exception($"Failed to start process: {appPath}");
         }
-        
-        // Wait for the process to be ready
+
         try
         {
             process.WaitForInputIdle(5000);
         }
         catch { /* Some processes don't support this */ }
-        
-        Thread.Sleep(1000); // Extra wait for window to appear
-        
-        // Find window by process ID from desktop
+
+        Thread.Sleep(1000);
+
         var desktop = _automation.GetDesktop();
         Window? window = null;
-        
-        // Try to find by process ID first
+
         var element = desktop.FindFirstDescendant(cf => cf.ByProcessId(process.Id));
         if (element != null)
         {
             window = element.AsWindow();
         }
-        
-        // If not found, the app might have spawned a different process (common for UWP)
-        // Search by waiting for a new window
+
         if (window == null)
         {
-            // Get window count before
-            var existingTitles = new HashSet<string>(
-                _windows.Values.Select(w => w.Title).Where(t => !string.IsNullOrEmpty(t))
-            );
-            
-            // Wait and look for new windows
+            HashSet<string> existingTitles;
+            lock (_sync)
+            {
+                existingTitles = new HashSet<string>(
+                    _windows.Values.Select(w => w.Title).Where(t => !string.IsNullOrEmpty(t))
+                );
+            }
+
             for (int i = 0; i < 10 && window == null; i++)
             {
                 Thread.Sleep(500);
@@ -78,7 +76,6 @@ public class SessionManager : IDisposable
                     var win = w.AsWindow();
                     if (win != null && !string.IsNullOrEmpty(win.Title))
                     {
-                        // Check if this looks like our app
                         var title = win.Title.ToLowerInvariant();
                         var appName = Path.GetFileNameWithoutExtension(appPath).ToLowerInvariant();
                         if (title.Contains(appName) || !existingTitles.Contains(win.Title))
@@ -90,7 +87,7 @@ public class SessionManager : IDisposable
                 }
             }
         }
-        
+
         if (window == null)
         {
             throw new Exception($"Could not find window for {appPath}. Try using windows_list_windows and windows_focus instead.");
@@ -104,7 +101,7 @@ public class SessionManager : IDisposable
     {
         var desktop = _automation.GetDesktop();
         var window = desktop.FindFirstDescendant(cf => cf.ByName(title))?.AsWindow();
-        
+
         if (window == null)
         {
             throw new Exception($"Window not found: {title}");
@@ -116,21 +113,36 @@ public class SessionManager : IDisposable
 
     public string RegisterWindow(Window window)
     {
-        var handle = $"w{++_windowCounter}";
-        _windows[handle] = window;
-        return handle;
+        IntPtr hwnd = IntPtr.Zero;
+        try { hwnd = window.Properties.NativeWindowHandle.ValueOrDefault; } catch { }
+
+        lock (_sync)
+        {
+            if (hwnd != IntPtr.Zero && _hwndToHandle.TryGetValue(hwnd, out var existing))
+            {
+                _windows[existing] = window;
+                return existing;
+            }
+            var handle = $"w{++_windowCounter}";
+            _windows[handle] = window;
+            if (hwnd != IntPtr.Zero) _hwndToHandle[hwnd] = handle;
+            return handle;
+        }
     }
 
     public Window? GetWindow(string handle)
     {
-        return _windows.TryGetValue(handle, out var window) ? window : null;
+        lock (_sync)
+        {
+            return _windows.TryGetValue(handle, out var window) ? window : null;
+        }
     }
 
     public List<(string handle, string title, string? processName)> ListWindows()
     {
         var desktop = _automation.GetDesktop();
         var windows = desktop.FindAllChildren(cf => cf.ByControlType(FlaUI.Core.Definitions.ControlType.Window));
-        
+
         var result = new List<(string, string, string?)>();
         foreach (var w in windows)
         {
@@ -139,14 +151,14 @@ public class SessionManager : IDisposable
             {
                 var handle = RegisterWindow(window);
                 string? processName = null;
-                try 
-                { 
-                    processName = window.Properties.ProcessId.TryGetValue(out var pid) 
-                        ? System.Diagnostics.Process.GetProcessById(pid).ProcessName 
-                        : null; 
+                try
+                {
+                    processName = window.Properties.ProcessId.TryGetValue(out var pid)
+                        ? System.Diagnostics.Process.GetProcessById(pid).ProcessName
+                        : null;
                 }
                 catch { }
-                
+
                 result.Add((handle, window.Title, processName));
             }
         }
@@ -170,18 +182,31 @@ public class SessionManager : IDisposable
         {
             throw new Exception($"Window not found: {handle}");
         }
+
+        IntPtr hwnd = IntPtr.Zero;
+        try { hwnd = window.Properties.NativeWindowHandle.ValueOrDefault; } catch { }
+
+        lock (_sync)
+        {
+            if (hwnd != IntPtr.Zero) _hwndToHandle.Remove(hwnd);
+            _windows.Remove(handle);
+        }
+
         window.Close();
-        _windows.Remove(handle);
     }
 
     public void Dispose()
     {
-        foreach (var app in _applications.Values)
+        lock (_sync)
         {
-            try { app.Close(); } catch { }
+            foreach (var app in _applications.Values)
+            {
+                try { app.Close(); } catch { }
+            }
+            _applications.Clear();
+            _hwndToHandle.Clear();
+            _windows.Clear();
         }
-        _applications.Clear();
-        _windows.Clear();
         _automation.Dispose();
     }
 }

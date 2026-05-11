@@ -20,7 +20,7 @@ public class ScreenshotTool : ToolBase
 
     public override string Name => "windows_screenshot";
 
-    public override string Description => 
+    public override string Description =>
         "Take a screenshot of a window or specific element. Returns the image as base64-encoded PNG.";
 
     public override object InputSchema => new
@@ -52,10 +52,9 @@ public class ScreenshotTool : ToolBase
         var refId = GetStringArgument(arguments, "ref");
         var fullScreen = GetBoolArgument(arguments, "fullScreen", false);
 
+        CaptureImage? capture = null;
         try
         {
-            CaptureImage capture;
-
             if (fullScreen)
             {
                 capture = Capture.Screen();
@@ -104,13 +103,15 @@ public class ScreenshotTool : ToolBase
 
             using var stream = new MemoryStream();
             capture.Bitmap.Save(stream, System.Drawing.Imaging.ImageFormat.Png);
-            var imageData = stream.ToArray();
-
-            return Task.FromResult(ImageResult(imageData, "image/png"));
+            return Task.FromResult(ImageResult(stream.ToArray(), "image/png"));
         }
         catch (Exception ex)
         {
             return Task.FromResult(ErrorResult($"Failed to capture screenshot: {ex.Message}"));
+        }
+        finally
+        {
+            capture?.Dispose();
         }
     }
 }
