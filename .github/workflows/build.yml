@@ -41,14 +41,30 @@ jobs:
         echo "NuGetVersion: ${{ steps.gitversion.outputs.nuGetVersion }}"
 
     - name: Restore dependencies
-      run: dotnet restore src/FlaUI.Mcp/FlaUI.Mcp.csproj
+      run: dotnet restore FlaUI.Mcp.sln
 
     - name: Build
       run: |
-        dotnet build src/FlaUI.Mcp/FlaUI.Mcp.csproj `
+        dotnet build FlaUI.Mcp.sln `
           --configuration Release `
           --no-restore `
           -p:Version=${{ steps.gitversion.outputs.semVer }}
+
+    - name: Test
+      if: matrix.runtime == 'win-x64'
+      run: |
+        dotnet test tests/FlaUI.Mcp.Tests/FlaUI.Mcp.Tests.csproj `
+          --configuration Release `
+          --no-build `
+          --logger "trx;LogFileName=test-results.trx" `
+          --results-directory TestResults
+
+    - name: Upload test results
+      if: always() && matrix.runtime == 'win-x64'
+      uses: actions/upload-artifact@v4
+      with:
+        name: test-results
+        path: TestResults/
 
     - name: Publish
       run: |
