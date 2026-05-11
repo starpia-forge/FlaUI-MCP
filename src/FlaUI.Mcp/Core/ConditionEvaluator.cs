@@ -122,38 +122,10 @@ public static class ConditionEvaluator
     }
 
     /// <summary>
-    /// Map snapshot role strings (e.g. "button") to ControlType — inverse of SnapshotBuilder.GetElementRole.
+    /// Map snapshot role strings (e.g. "button") to ControlType.
+    /// Delegates to <see cref="Roles.ToControlType"/>.
     /// </summary>
-    public static ControlType RoleToControlType(string role) => role.ToLowerInvariant() switch
-    {
-        "button"      => ControlType.Button,
-        "textbox"     => ControlType.Edit,
-        "text"        => ControlType.Text,
-        "checkbox"    => ControlType.CheckBox,
-        "radio"       => ControlType.RadioButton,
-        "combobox"    => ControlType.ComboBox,
-        "list"        => ControlType.List,
-        "listitem"    => ControlType.ListItem,
-        "menu"        => ControlType.Menu,
-        "menuitem"    => ControlType.MenuItem,
-        "menubar"     => ControlType.MenuBar,
-        "tree"        => ControlType.Tree,
-        "treeitem"    => ControlType.TreeItem,
-        "tablist"     => ControlType.Tab,
-        "tab"         => ControlType.TabItem,
-        "table"       => ControlType.Table,
-        "row"         => ControlType.DataItem,
-        "slider"      => ControlType.Slider,
-        "spinbutton"  => ControlType.Spinner,
-        "progressbar" => ControlType.ProgressBar,
-        "link"        => ControlType.Hyperlink,
-        "group"       => ControlType.Group,
-        "window"      => ControlType.Window,
-        "document"    => ControlType.Document,
-        "toolbar"     => ControlType.ToolBar,
-        "grid"        => ControlType.DataGrid,
-        _             => ControlType.Custom
-    };
+    public static ControlType RoleToControlType(string role) => Roles.ToControlType(role);
 
     private static bool ReadCheckedState(AutomationElement element)
     {
