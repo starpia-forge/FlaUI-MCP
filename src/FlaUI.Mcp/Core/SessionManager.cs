@@ -3,7 +3,7 @@ using FlaUI.Core.AutomationElements;
 using FlaUI.UIA3;
 using FlaUIApplication = FlaUI.Core.Application;
 
-namespace PlaywrightWindows.Mcp.Core;
+namespace FlaUI.Mcp.Core;
 
 /// <summary>
 /// Manages UI Automation sessions and launched applications

@@ -1,8 +1,8 @@
 using System.Text.Json;
 using FlaUI.Core.AutomationElements;
-using PlaywrightWindows.Mcp.Core;
+using FlaUI.Mcp.Core;
 
-namespace PlaywrightWindows.Mcp.Tools;
+namespace FlaUI.Mcp.Tools;
 
 /// <summary>
 /// Take accessibility snapshot of a window - THE KEY TOOL FOR AGENTS

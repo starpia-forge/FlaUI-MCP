@@ -1,7 +1,7 @@
 using System.Text.Json;
 using System.Text.Json.Serialization;
 
-namespace PlaywrightWindows.Mcp;
+namespace FlaUI.Mcp;
 
 /// <summary>
 /// MCP Protocol message types and JSON-RPC handling

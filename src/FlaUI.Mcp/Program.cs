@@ -1,6 +1,6 @@
-using PlaywrightWindows.Mcp;
-using PlaywrightWindows.Mcp.Core;
-using PlaywrightWindows.Mcp.Tools;
+using FlaUI.Mcp;
+using FlaUI.Mcp.Core;
+using FlaUI.Mcp.Tools;
 
 // Create shared services
 var sessionManager = new SessionManager();

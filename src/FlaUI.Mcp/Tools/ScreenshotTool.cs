@@ -1,8 +1,8 @@
 using System.Text.Json;
 using FlaUI.Core.Capturing;
-using PlaywrightWindows.Mcp.Core;
+using FlaUI.Mcp.Core;
 
-namespace PlaywrightWindows.Mcp.Tools;
+namespace FlaUI.Mcp.Tools;
 
 /// <summary>
 /// Take a screenshot

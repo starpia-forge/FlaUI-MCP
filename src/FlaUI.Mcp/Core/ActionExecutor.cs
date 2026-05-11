@@ -2,7 +2,7 @@ using System.Runtime.InteropServices;
 using FlaUI.Core.AutomationElements;
 using FlaUI.Core.Exceptions;
 
-namespace PlaywrightWindows.Mcp.Core;
+namespace FlaUI.Mcp.Core;
 
 /// <summary>
 /// Provides auto-wait and stale-element retry semantics for UI Automation actions.

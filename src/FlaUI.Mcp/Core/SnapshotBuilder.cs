@@ -2,7 +2,7 @@ using System.Text;
 using FlaUI.Core.AutomationElements;
 using FlaUI.Core.Definitions;
 
-namespace PlaywrightWindows.Mcp.Core;
+namespace FlaUI.Mcp.Core;
 
 /// <summary>
 /// Builds agent-friendly accessibility snapshots from UI Automation trees

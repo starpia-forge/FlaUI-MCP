@@ -1,7 +1,7 @@
 using System.Text.Json;
-using PlaywrightWindows.Mcp.Core;
+using FlaUI.Mcp.Core;
 
-namespace PlaywrightWindows.Mcp.Tools;
+namespace FlaUI.Mcp.Tools;
 
 /// <summary>
 /// Launch a Windows application

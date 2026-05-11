@@ -2,7 +2,7 @@ using FlaUI.Core.AutomationElements;
 using FlaUI.Core.Input;
 using FlaUI.Core.WindowsAPI;
 
-namespace PlaywrightWindows.Mcp.Core;
+namespace FlaUI.Mcp.Core;
 
 /// <summary>
 /// Shared click logic used by both ClickTool and BatchTool.

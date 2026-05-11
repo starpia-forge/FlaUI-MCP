@@ -1,6 +1,6 @@
 using System.Text.Json;
 
-namespace PlaywrightWindows.Mcp;
+namespace FlaUI.Mcp;
 
 /// <summary>
 /// Registry for MCP tools - maps tool names to handlers
