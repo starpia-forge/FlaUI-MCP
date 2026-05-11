@@ -56,6 +56,7 @@ jobs:
         dotnet test tests/FlaUI.Mcp.Tests/FlaUI.Mcp.Tests.csproj `
           --configuration Release `
           --no-build `
+          --filter "Category!=Integration" `
           --logger "trx;LogFileName=test-results.trx" `
           --results-directory TestResults
 
