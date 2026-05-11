@@ -141,10 +141,16 @@ git clone https://github.com/shanselman/FlaUI-MCP.git
 cd FlaUI-MCP
 
 # Build
-dotnet build src/FlaUI.Mcp
+dotnet build FlaUI.Mcp.sln
 
 # Run
 dotnet run --project src/FlaUI.Mcp
+```
+
+## Testing
+
+```powershell
+dotnet test FlaUI.Mcp.sln
 ```
 
 ## Architecture
