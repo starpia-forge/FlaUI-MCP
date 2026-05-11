@@ -56,10 +56,7 @@ public class SnapshotBuilder
                 BuildElementSnapshot(sb, windowHandle, child, depth + 1);
             }
         }
-        catch
-        {
-            // Some elements throw when accessing children
-        }
+        catch { /* child enumeration failed; tree may have mutated */ }
     }
 
     private string BuildElementLine(AutomationElement element, string refId, string? name, string role)
@@ -136,10 +133,7 @@ public class SnapshotBuilder
         {
             return GetElementRole(element.Properties.ControlType.ValueOrDefault);
         }
-        catch
-        {
-            return "element";
-        }
+        catch { return "element"; /* ControlType unreadable */ }
     }
 
     private string? GetElementName(AutomationElement element)
@@ -158,10 +152,7 @@ public class SnapshotBuilder
 
             return null;
         }
-        catch
-        {
-            return null;
-        }
+        catch { return null; /* property read failed */ }
     }
 
     private List<string> GetStateIndicators(AutomationElement element)
@@ -211,10 +202,7 @@ public class SnapshotBuilder
                     states.Add("collapsed");
             }
         }
-        catch
-        {
-            // Ignore state query errors
-        }
+        catch { /* state pattern read failed */ }
 
         return states;
     }

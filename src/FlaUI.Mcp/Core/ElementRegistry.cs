@@ -78,11 +78,9 @@ public class ElementRegistry
     /// </summary>
     public string Register(string windowHandle, AutomationElement element)
     {
-        string? autoId = null, name = null;
-        var ctrlType = ControlType.Custom;
-        try { autoId = element.Properties.AutomationId.ValueOrDefault; } catch { }
-        try { name = element.Properties.Name.ValueOrDefault; } catch { }
-        try { ctrlType = element.Properties.ControlType.ValueOrDefault; } catch { }
+        var autoId   = SafeAccess.Get(() => element.Properties.AutomationId.ValueOrDefault);
+        var name     = SafeAccess.Get(() => element.Properties.Name.ValueOrDefault);
+        var ctrlType = SafeAccess.Get(() => element.Properties.ControlType.ValueOrDefault, ControlType.Custom);
 
         lock (_sync)
         {

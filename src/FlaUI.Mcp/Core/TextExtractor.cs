@@ -13,12 +13,10 @@ public static class TextExtractor
             if (element.Patterns.Value.IsSupported)
                 result = element.Patterns.Value.Pattern.Value.ValueOrDefault;
         }
-        catch { }
+        catch { /* Value pattern not supported */ }
 
         if (string.IsNullOrEmpty(result))
-        {
-            try { result = element.Properties.Name.ValueOrDefault; } catch { }
-        }
+            result = SafeAccess.Get(() => element.Properties.Name.ValueOrDefault);
 
         if (string.IsNullOrEmpty(result))
         {
@@ -27,7 +25,7 @@ public static class TextExtractor
                 if (element.Patterns.Text.IsSupported)
                     result = element.Patterns.Text.Pattern.DocumentRange.GetText(-1);
             }
-            catch { }
+            catch { /* Text pattern read failed */ }
         }
 
         return result ?? "";

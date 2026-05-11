@@ -105,8 +105,7 @@ public class SessionManager : IDisposable
 
     public string RegisterWindow(Window window)
     {
-        IntPtr hwnd = IntPtr.Zero;
-        try { hwnd = window.Properties.NativeWindowHandle.ValueOrDefault; } catch { }
+        var hwnd = SafeAccess.Get(() => window.Properties.NativeWindowHandle.ValueOrDefault, IntPtr.Zero);
 
         lock (_sync)
         {
@@ -149,7 +148,7 @@ public class SessionManager : IDisposable
                         ? System.Diagnostics.Process.GetProcessById(pid).ProcessName
                         : null;
                 }
-                catch { }
+                catch { /* process exited or access denied — best effort process name */ }
 
                 result.Add((handle, window.Title, processName));
             }
@@ -175,8 +174,7 @@ public class SessionManager : IDisposable
             throw new Exception($"Window not found: {handle}");
         }
 
-        IntPtr hwnd = IntPtr.Zero;
-        try { hwnd = window.Properties.NativeWindowHandle.ValueOrDefault; } catch { }
+        var hwnd = SafeAccess.Get(() => window.Properties.NativeWindowHandle.ValueOrDefault, IntPtr.Zero);
 
         lock (_sync)
         {
@@ -190,18 +188,14 @@ public class SessionManager : IDisposable
     private static HashSet<IntPtr> GetTopLevelHwnds(FlaUI.Core.AutomationElements.AutomationElement desktop) =>
         new(desktop
             .FindAllChildren(cf => cf.ByControlType(FlaUI.Core.Definitions.ControlType.Window))
-            .Select(w => {
-                try { return w.Properties.NativeWindowHandle.ValueOrDefault; }
-                catch { return IntPtr.Zero; }
-            })
+            .Select(w => SafeAccess.Get(() => w.Properties.NativeWindowHandle.ValueOrDefault, IntPtr.Zero))
             .Where(h => h != IntPtr.Zero));
 
     private static Window? FindNewWindow(FlaUI.Core.AutomationElements.AutomationElement desktop, HashSet<IntPtr> preExistingHwnds)
     {
         foreach (var w in desktop.FindAllChildren(cf => cf.ByControlType(FlaUI.Core.Definitions.ControlType.Window)))
         {
-            IntPtr hwnd = IntPtr.Zero;
-            try { hwnd = w.Properties.NativeWindowHandle.ValueOrDefault; } catch { }
+            var hwnd = SafeAccess.Get(() => w.Properties.NativeWindowHandle.ValueOrDefault, IntPtr.Zero);
 
             if (hwnd != IntPtr.Zero && !preExistingHwnds.Contains(hwnd))
             {

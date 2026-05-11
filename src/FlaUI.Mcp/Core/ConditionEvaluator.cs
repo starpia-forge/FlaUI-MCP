@@ -37,32 +37,28 @@ public static class ConditionEvaluator
             case "visible":
             {
                 if (element == null) return (false, "element not found");
-                var offscreen = false;
-                try { offscreen = element.Properties.IsOffscreen.ValueOrDefault; } catch { }
+                var offscreen = SafeAccess.Get(() => element.Properties.IsOffscreen.ValueOrDefault);
                 return (!offscreen, offscreen ? "offscreen" : "visible");
             }
 
             case "hidden":
             {
                 if (element == null) return (true, "element not found (counts as hidden)");
-                var offscreen = false;
-                try { offscreen = element.Properties.IsOffscreen.ValueOrDefault; } catch { }
+                var offscreen = SafeAccess.Get(() => element.Properties.IsOffscreen.ValueOrDefault);
                 return (offscreen, offscreen ? "offscreen" : "visible");
             }
 
             case "enabled":
             {
                 if (element == null) return (false, "element not found");
-                var enabled = true;
-                try { enabled = element.Properties.IsEnabled.ValueOrDefault; } catch { }
+                var enabled = SafeAccess.Get(() => element.Properties.IsEnabled.ValueOrDefault, fallback: true);
                 return (enabled, enabled ? "enabled" : "disabled");
             }
 
             case "disabled":
             {
                 if (element == null) return (false, "element not found");
-                var enabled = true;
-                try { enabled = element.Properties.IsEnabled.ValueOrDefault; } catch { }
+                var enabled = SafeAccess.Get(() => element.Properties.IsEnabled.ValueOrDefault, fallback: true);
                 return (!enabled, enabled ? "enabled" : "disabled");
             }
 
@@ -121,7 +117,7 @@ public static class ConditionEvaluator
             if (!string.IsNullOrEmpty(name))
                 return window.FindFirstDescendant(cf => cf.ByName(name));
         }
-        catch { }
+        catch { /* selector matched nothing or tree mutated */ }
         return null;
     }
 
@@ -168,7 +164,7 @@ public static class ConditionEvaluator
             if (element.Patterns.SelectionItem.IsSupported)
                 return element.Patterns.SelectionItem.Pattern.IsSelected.ValueOrDefault;
         }
-        catch { }
+        catch { /* pattern not supported on this element */ }
         return false;
     }
 }
