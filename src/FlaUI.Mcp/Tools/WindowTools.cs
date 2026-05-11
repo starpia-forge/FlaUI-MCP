@@ -17,30 +17,39 @@ public class ListWindowsTool : ToolBase
 
     public override string Name => "windows_list_windows";
 
-    public override string Description => 
+    public override string Description =>
         "List all open windows with their handles, titles, and process names. " +
-        "Use this to find windows to interact with.";
+        "Use this to find windows to interact with. " +
+        "Set includeHidden=true to also show windows with empty titles (e.g. tray-resident apps).";
 
     public override object InputSchema => new
     {
         type = "object",
-        properties = new { }
+        properties = new
+        {
+            includeHidden = new
+            {
+                type = "boolean",
+                description = "Include windows with empty titles (often hidden / tray-resident). Default false."
+            }
+        }
     };
 
     public override Task<McpToolResult> ExecuteAsync(JsonElement? arguments)
     {
         try
         {
-            var windows = _sessionManager.ListWindows();
+            var includeHidden = GetBoolArgument(arguments, "includeHidden", false);
+            var windows = _sessionManager.ListWindows(includeHidden);
 
             if (windows.Count == 0)
             {
                 return Task.FromResult(TextResult("No windows found"));
             }
 
-            var lines = windows.Select(w => 
-                $"- {w.handle}: \"{w.title}\" ({w.processName ?? "unknown"})");
-            
+            var lines = windows.Select(w =>
+                $"- {w.handle}: \"{(string.IsNullOrEmpty(w.title) ? "(untitled)" : w.title)}\" ({w.processName ?? "unknown"})");
+
             return Task.FromResult(TextResult(string.Join("\n", lines)));
         }
         catch (Exception ex)

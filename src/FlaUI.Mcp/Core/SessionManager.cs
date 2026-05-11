@@ -4,6 +4,13 @@ using FlaUI.UIA3;
 
 namespace FlaUI.Mcp.Core;
 
+public readonly record struct AttachedWindow(
+    string Handle,
+    IntPtr Hwnd,
+    string Title,
+    bool IsVisible,
+    int OwnerPid);
+
 /// <summary>
 /// Manages UI Automation sessions and launched applications
 /// </summary>
@@ -103,6 +110,29 @@ public class SessionManager : IDisposable
         return (handle, window);
     }
 
+    public List<AttachedWindow> AttachByProcess(int? pid, string? processName)
+    {
+        var (resolvedPid, label) = ResolveTargetPid(pid, processName);
+        var windows = EnumerateWindowsForPid(resolvedPid);
+
+        if (windows.Count == 0)
+            throw new Exception(
+                $"Process '{label}' (pid={resolvedPid}) has no UIA-visible windows. " +
+                $"It may be running headless, as a message-only window, or with only a tray icon. " +
+                $"Tray-icon invocation is not yet supported (planned: windows_tray_invoke).");
+
+        var result = new List<AttachedWindow>(windows.Count);
+        foreach (var window in windows)
+        {
+            var hwnd = SafeAccess.Get(() => window.Properties.NativeWindowHandle.ValueOrDefault, IntPtr.Zero);
+            var title = SafeAccess.Get(() => window.Title ?? string.Empty, string.Empty);
+            var isVisible = !SafeAccess.Get(() => window.Properties.IsOffscreen.ValueOrDefault, false);
+            var handle = RegisterWindow(window);
+            result.Add(new AttachedWindow(handle, hwnd, title, isVisible, resolvedPid));
+        }
+        return result;
+    }
+
     public string RegisterWindow(Window window)
     {
         var hwnd = SafeAccess.Get(() => window.Properties.NativeWindowHandle.ValueOrDefault, IntPtr.Zero);
@@ -129,7 +159,7 @@ public class SessionManager : IDisposable
         }
     }
 
-    public List<(string handle, string title, string? processName)> ListWindows()
+    public List<(string handle, string title, string? processName)> ListWindows(bool includeHidden = false)
     {
         var desktop = _automation.GetDesktop();
         var windows = desktop.FindAllChildren(cf => cf.ByControlType(FlaUI.Core.Definitions.ControlType.Window));
@@ -138,7 +168,7 @@ public class SessionManager : IDisposable
         foreach (var w in windows)
         {
             var window = w.AsWindow();
-            if (window != null && !string.IsNullOrEmpty(window.Title))
+            if (window != null && (includeHidden || !string.IsNullOrEmpty(window.Title)))
             {
                 var handle = RegisterWindow(window);
                 string? processName = null;
@@ -205,6 +235,94 @@ public class SessionManager : IDisposable
             }
         }
         return null;
+    }
+
+    private static (int pid, string label) ResolveTargetPid(int? pid, string? processName)
+    {
+        if (pid.HasValue && !string.IsNullOrEmpty(processName))
+            throw new Exception("Provide exactly one of 'pid' or 'processName', not both.");
+        if (!pid.HasValue && string.IsNullOrEmpty(processName))
+            throw new Exception("Provide either 'pid' or 'processName'.");
+
+        if (pid.HasValue)
+        {
+            try
+            {
+                using var p = System.Diagnostics.Process.GetProcessById(pid.Value);
+                return (pid.Value, p.ProcessName);
+            }
+            catch (ArgumentException)
+            {
+                throw new Exception($"No running process with pid={pid.Value}.");
+            }
+        }
+
+        var name = processName!.EndsWith(".exe", StringComparison.OrdinalIgnoreCase)
+            ? processName[..^4]
+            : processName;
+        var processes = System.Diagnostics.Process.GetProcessesByName(name);
+        try
+        {
+            if (processes.Length == 0)
+                throw new Exception($"No running process named '{name}'.");
+            if (processes.Length > 1)
+            {
+                var details = string.Join(", ", processes.Select(p =>
+                {
+                    var title = SafeMainTitle(p);
+                    return string.IsNullOrEmpty(title) ? $"pid={p.Id}" : $"pid={p.Id} (\"{title}\")";
+                }));
+                throw new Exception($"Ambiguous process name '{name}': {details}. Re-call with explicit pid.");
+            }
+            return (processes[0].Id, name);
+        }
+        finally
+        {
+            foreach (var p in processes) p.Dispose();
+        }
+    }
+
+    private List<Window> EnumerateWindowsForPid(int pid)
+    {
+        var seen = new HashSet<IntPtr>();
+        var result = new List<Window>();
+
+        // Stage 1: FlaUI Application API — returns top-level windows even if hidden
+        try
+        {
+            using var app = FlaUI.Core.Application.Attach(pid);
+            foreach (var w in app.GetAllTopLevelWindows(_automation))
+            {
+                if (w == null) continue;
+                var hwnd = SafeAccess.Get(() => w.Properties.NativeWindowHandle.ValueOrDefault, IntPtr.Zero);
+                if (hwnd != IntPtr.Zero && seen.Add(hwnd))
+                    result.Add(w);
+            }
+        }
+        catch { /* elevated process or exited between resolve and attach — fall through */ }
+
+        // Stage 2: Desktop UIA child walk — catches any window UIA exposes as desktop child
+        if (result.Count == 0)
+        {
+            var desktop = _automation.GetDesktop();
+            foreach (var e in desktop.FindAllChildren(cf =>
+                cf.ByProcessId(pid).And(cf.ByControlType(FlaUI.Core.Definitions.ControlType.Window))))
+            {
+                var w = e.AsWindow();
+                if (w == null) continue;
+                var hwnd = SafeAccess.Get(() => w.Properties.NativeWindowHandle.ValueOrDefault, IntPtr.Zero);
+                if (hwnd != IntPtr.Zero && seen.Add(hwnd))
+                    result.Add(w);
+            }
+        }
+
+        return result;
+    }
+
+    private static string SafeMainTitle(System.Diagnostics.Process p)
+    {
+        try { return p.MainWindowTitle ?? string.Empty; }
+        catch { return string.Empty; }
     }
 
     public void Dispose()

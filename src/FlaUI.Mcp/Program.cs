@@ -9,6 +9,7 @@ var elementRegistry = new ElementRegistry();
 // Register all tools
 var toolRegistry = new ToolRegistry();
 toolRegistry.RegisterTool(new LaunchTool(sessionManager));
+toolRegistry.RegisterTool(new AttachTool(sessionManager));
 toolRegistry.RegisterTool(new SnapshotTool(sessionManager, elementRegistry));
 toolRegistry.RegisterTool(new ClickTool(sessionManager, elementRegistry));
 toolRegistry.RegisterTool(new TypeTool(sessionManager, elementRegistry));
