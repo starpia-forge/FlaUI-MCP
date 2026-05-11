@@ -64,7 +64,7 @@ public record JsonRpcError
 public record McpServerInfo
 {
     [JsonPropertyName("name")]
-    public string Name { get; init; } = "playwright-windows";
+    public string Name { get; init; } = "flaui-mcp";
     
     [JsonPropertyName("version")]
     public string Version { get; init; } = "0.1.0";
