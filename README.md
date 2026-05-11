@@ -54,7 +54,24 @@ Agent: Calculate 3 × 3
 
 ### Prerequisites
 - Windows 10/11
-- .NET 8.0 Runtime
+- .NET 8.0 Runtime (for the release binaries) **or** .NET 8.0 SDK (for the Claude Code plugin install and building from source)
+
+### Install as a Claude Code plugin (recommended for Claude Code users)
+
+If you use [Claude Code](https://code.claude.com/), install FlaUI-MCP as a plugin with two commands — no manual MCP config file editing required:
+
+```bash
+/plugin marketplace add starpia-forge/FlaUI-MCP
+/plugin install flaui-mcp@flaui-mcp-marketplace
+```
+
+Claude Code spawns the MCP server automatically. The 17 `windows_*` tools become available in your session immediately.
+
+**Prerequisite**: .NET 8.0 SDK on `PATH` (the plugin invokes `dotnet run`; the SDK builds the server from source on first launch). If you only have the .NET runtime, use the release-binary install below instead.
+
+> First launch takes ~10–30 s for the initial restore + build. Subsequent launches reuse the cached build (~1–3 s).
+>
+> Update with `/plugin update flaui-mcp@flaui-mcp-marketplace`; uninstall with `/plugin uninstall flaui-mcp@flaui-mcp-marketplace`.
 
 ### Download Release
 

@@ -1,0 +1,35 @@
+{
+  "name": "flaui-mcp",
+  "version": "0.1.0",
+  "description": "Windows desktop automation MCP server — drive UI by accessibility refs (like Playwright for Windows).",
+  "author": {
+    "name": "starpia-forge",
+    "url": "https://github.com/starpia-forge"
+  },
+  "homepage": "https://github.com/starpia-forge/FlaUI-MCP",
+  "repository": "https://github.com/starpia-forge/FlaUI-MCP",
+  "license": "MIT",
+  "keywords": [
+    "windows",
+    "desktop",
+    "automation",
+    "accessibility",
+    "uia",
+    "qa",
+    "testing",
+    "flaui"
+  ],
+  "mcpServers": {
+    "flaui": {
+      "command": "dotnet",
+      "args": [
+        "run",
+        "--project",
+        "${CLAUDE_PLUGIN_ROOT}/src/FlaUI.Mcp",
+        "--configuration",
+        "Release"
+      ],
+      "cwd": "${CLAUDE_PLUGIN_ROOT}"
+    }
+  }
+}

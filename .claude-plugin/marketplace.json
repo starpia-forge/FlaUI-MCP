@@ -1,0 +1,33 @@
+{
+  "name": "flaui-mcp-marketplace",
+  "owner": {
+    "name": "starpia-forge",
+    "url": "https://github.com/starpia-forge"
+  },
+  "description": "Marketplace hosting the FlaUI-MCP Windows desktop automation plugin.",
+  "plugins": [
+    {
+      "name": "flaui-mcp",
+      "source": "./",
+      "description": "17 MCP tools for automating Windows desktop apps via UI Automation: launch, snapshot, click, type, fill, get_text, screenshot, list_windows, focus, close, batch, wait_for, keys, hover, scroll, assert, drag.",
+      "version": "0.1.0",
+      "license": "MIT",
+      "homepage": "https://github.com/starpia-forge/FlaUI-MCP",
+      "repository": "https://github.com/starpia-forge/FlaUI-MCP",
+      "author": {
+        "name": "starpia-forge",
+        "url": "https://github.com/starpia-forge"
+      },
+      "keywords": [
+        "windows",
+        "desktop",
+        "automation",
+        "accessibility",
+        "uia",
+        "qa",
+        "testing"
+      ],
+      "category": "automation"
+    }
+  ]
+}
