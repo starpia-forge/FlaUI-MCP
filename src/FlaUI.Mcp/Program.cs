@@ -10,6 +10,8 @@ var elementRegistry = new ElementRegistry();
 var toolRegistry = new ToolRegistry();
 toolRegistry.RegisterTool(new LaunchTool(sessionManager));
 toolRegistry.RegisterTool(new AttachTool(sessionManager));
+toolRegistry.RegisterTool(new TrayListTool(sessionManager, elementRegistry));
+toolRegistry.RegisterTool(new TrayInvokeTool(sessionManager, elementRegistry));
 toolRegistry.RegisterTool(new SnapshotTool(sessionManager, elementRegistry));
 toolRegistry.RegisterTool(new ClickTool(sessionManager, elementRegistry));
 toolRegistry.RegisterTool(new TypeTool(sessionManager, elementRegistry));

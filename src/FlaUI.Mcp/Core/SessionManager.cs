@@ -119,7 +119,7 @@ public class SessionManager : IDisposable
             throw new Exception(
                 $"Process '{label}' (pid={resolvedPid}) has no UIA-visible windows. " +
                 $"It may be running headless, as a message-only window, or with only a tray icon. " +
-                $"Tray-icon invocation is not yet supported (planned: windows_tray_invoke).");
+                $"If it has a tray icon, use windows_tray_list / windows_tray_invoke to surface its window first.");
 
         var result = new List<AttachedWindow>(windows.Count);
         foreach (var window in windows)
@@ -213,6 +213,22 @@ public class SessionManager : IDisposable
         }
 
         window.Close();
+    }
+
+    internal HashSet<IntPtr> SnapshotTopLevelHwnds() =>
+        GetTopLevelHwnds(_automation.GetDesktop());
+
+    internal Window? PollForNewWindow(HashSet<IntPtr> baseline, int timeoutMs)
+    {
+        var deadline = DateTime.UtcNow.AddMilliseconds(timeoutMs);
+        var desktop = _automation.GetDesktop();
+        while (DateTime.UtcNow < deadline)
+        {
+            var wnd = FindNewWindow(desktop, baseline);
+            if (wnd != null) return wnd;
+            Thread.Sleep(200);
+        }
+        return null;
     }
 
     private static HashSet<IntPtr> GetTopLevelHwnds(FlaUI.Core.AutomationElements.AutomationElement desktop) =>
