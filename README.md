@@ -126,6 +126,7 @@ Or using `dotnet run`:
 | Window | `windows_focus` | Bring a window to foreground |
 | Window | `windows_close` | Close a window |
 | Inspect | `windows_snapshot` | Get accessibility tree with element refs (also accepts popup handles `m1`, `m2`, … from `windows_context_menu` or `windows_tray_invoke`) |
+| Inspect | `windows_inspect` | Dump all UIA properties (AutomationId, ClassName, BoundingRect, …) and supported patterns with current state for one element ref |
 | Inspect | `windows_get_text` | Get text content of an element |
 | Inspect | `windows_screenshot` | Capture window/element as PNG |
 | Mouse | `windows_click` | Click an element by ref |
