@@ -118,30 +118,30 @@ Or using `dotnet run`:
 
 ## Available Tools
 
-| Tool | Description |
-|------|-------------|
-| `windows_launch` | Launch a Windows application |
-| `windows_attach` | Attach to a running process by PID or executable name; returns handles for every UIA-visible window (including hidden ones typical of tray-resident apps) |
-| `windows_tray_list` | Enumerate Windows notification-area (system tray) icons; returns refs usable with `windows_tray_invoke` |
-| `windows_tray_invoke` | Click a tray icon by ref (left/right/middle, single or double); right-click auto-registers the context menu as a popup handle |
-| `windows_snapshot` | Get accessibility tree with element refs (also accepts popup handles `m1`, `m2`, … from `windows_context_menu` or `windows_tray_invoke`) |
-| `windows_click` | Click an element by ref |
-| `windows_type` | Type text into an element |
-| `windows_fill` | Clear and fill a text field |
-| `windows_get_text` | Get text content of an element |
-| `windows_screenshot` | Capture window/element as PNG |
-| `windows_list_windows` | List all open windows; pass `includeHidden=true` to surface windows with empty titles (tray-resident apps) |
-| `windows_focus` | Bring a window to foreground |
-| `windows_close` | Close a window |
-| `windows_batch` | Execute multiple actions in one call |
-| `windows_wait_for` | Poll until a condition holds (visible, enabled, textContains, …) |
-| `windows_keys` | Send keyboard shortcuts or sequences (`Ctrl+S`, `Alt+F4`, `Tab`) |
-| `windows_hover` | Move mouse over an element to trigger hover-only UI |
-| `windows_scroll` | Scroll within an element (UIA ScrollPattern or mouse wheel) |
-| `windows_assert` | One-shot structured PASS/FAIL condition check |
-| `windows_drag` | Drag from one element to another or to absolute coordinates |
-| `windows_context_menu` | Right-click an element (or send Shift+F10 / VK_APPS) and register the resulting context menu as a popup handle for `windows_snapshot` |
-| `windows_dismiss_menu` | Send Escape to close an open context menu and remove its popup handle from the registry |
+| Group | Tool | Description |
+|-------|------|-------------|
+| Session | `windows_launch` | Launch a Windows application |
+| Session | `windows_attach` | Attach to a running process by PID or executable name; returns handles for every UIA-visible window (including hidden ones typical of tray-resident apps) |
+| Window | `windows_list_windows` | List all open windows; pass `includeHidden=true` to surface windows with empty titles (tray-resident apps) |
+| Window | `windows_focus` | Bring a window to foreground |
+| Window | `windows_close` | Close a window |
+| Inspect | `windows_snapshot` | Get accessibility tree with element refs (also accepts popup handles `m1`, `m2`, … from `windows_context_menu` or `windows_tray_invoke`) |
+| Inspect | `windows_get_text` | Get text content of an element |
+| Inspect | `windows_screenshot` | Capture window/element as PNG |
+| Mouse | `windows_click` | Click an element by ref |
+| Mouse | `windows_hover` | Move mouse over an element to trigger hover-only UI |
+| Mouse | `windows_scroll` | Scroll within an element (UIA ScrollPattern or mouse wheel) |
+| Mouse | `windows_drag` | Drag from one element to another or to absolute coordinates |
+| Keyboard | `windows_type` | Type text into an element |
+| Keyboard | `windows_fill` | Clear and fill a text field |
+| Keyboard | `windows_keys` | Send keyboard shortcuts or sequences (`Ctrl+S`, `Alt+F4`, `Tab`) |
+| Tray & Menu | `windows_tray_list` | Enumerate Windows notification-area (system tray) icons; returns refs usable with `windows_tray_invoke` |
+| Tray & Menu | `windows_tray_invoke` | Click a tray icon by ref (left/right/middle, single or double); right-click auto-registers the context menu as a popup handle |
+| Tray & Menu | `windows_context_menu` | Right-click an element (or send Shift+F10 / VK_APPS) and register the resulting context menu as a popup handle for `windows_snapshot` |
+| Tray & Menu | `windows_dismiss_menu` | Send Escape to close an open context menu and remove its popup handle from the registry |
+| Flow | `windows_batch` | Execute multiple actions in one call |
+| Flow | `windows_wait_for` | Poll until a condition holds (visible, enabled, textContains, …) |
+| Flow | `windows_assert` | One-shot structured PASS/FAIL condition check |
 
 ## How It Works
 
