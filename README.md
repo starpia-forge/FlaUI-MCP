@@ -173,39 +173,6 @@ dotnet test FlaUI.Mcp.sln
 
 Unit tests live under `tests/FlaUI.Mcp.Tests/` (xUnit) and cover `ElementRegistry`, `SnapshotBuilder`, `ConditionEvaluator`, and `KeyMap` helpers. The CI workflow runs them automatically for the `win-x64` matrix leg.
 
-## Changes from upstream
-
-This fork diverges from [shanselman/FlaUI-MCP](https://github.com/shanselman/FlaUI-MCP) in four areas:
-
-**Stability & correctness**
-- HWND-diff window detection — `windows_launch` now identifies the new window by comparing top-level HWNDs before and after process start, instead of by title substring. This is required for UWP apps (Calculator launches via `ApplicationFrameHost.exe`) and for non-English Windows where the localized title (e.g. `계산기`) never matches the English filename.
-- Auto-wait & stale-element retry — `ActionExecutor` re-resolves stored locators when UI Automation throws `ElementNotAvailable` / `NoClickablePoint` / `UIA_E_ELEMENTNOTAVAILABLE`, with a configurable timeout (default 5 s).
-- JSON-RPC 2.0 / MCP spec compliance fixes (notification handling, error envelopes).
-- Handle leak, GDI leak, and thread-safety fixes around session and window registration.
-
-**Build & release pipeline**
-- `CI` (`.github/workflows/build.yml`) — runs on every branch push and PR. Matrix build for `win-x64` + `win-arm64`, plus xUnit tests on the x64 leg.
-- `CD` (`.github/workflows/release.yml`) — runs on `main` only. Uses [semantic-release](https://semantic-release.gitbook.io/) (`.releaserc.json`) to read Conventional Commits, decide the next version, tag it, and publish a GitHub release with all four ZIPs attached.
-- `GitVersion.yml` supplies SemVer-compatible assembly versions to in-progress builds.
-
-**Project layout**
-- Solution file (`FlaUI.Mcp.sln`) added; source folder renamed from `src/PlaywrightWindows.Mcp` to `src/FlaUI.Mcp`; namespace renamed from `PlaywrightWindows.Mcp` to `FlaUI.Mcp`.
-
-**Tests**
-- `tests/FlaUI.Mcp.Tests/` added with xUnit coverage for `ElementRegistry`, `SnapshotBuilder`, `ConditionEvaluator`, and `KeyMap` helpers.
-
-**New tools (QA gap-fillers)**
-- `windows_wait_for` — polls until a named condition holds (visible/hidden/enabled/textContains/…), with configurable timeout and per-poll interval. Eliminates fixed-sleep patterns for async UI flows.
-- `windows_keys` — sends keyboard shortcuts and sequences using chord syntax (`Ctrl+S`, `Alt+F4`, `Ctrl+Shift+N`, `Tab`).
-- `windows_hover` — moves the mouse over an element to trigger hover-only UI (tooltips, fly-out menus).
-- `windows_scroll` — scrolls within an element via UIA `ScrollPattern` (preferred) or mouse wheel fallback.
-- `windows_assert` — one-shot structured PASS/FAIL condition check; integrates with `windows_batch` `stopOnError` for test-suite-style batch workflows.
-- `windows_drag` — drags from one element to another (or to absolute coordinates) using interpolated mouse movement.
-
-### Contributing to this fork
-
-Commits on `main` must follow [Conventional Commits](https://www.conventionalcommits.org/) — `feat:` triggers a minor release, `fix:` triggers a patch release, and `BREAKING CHANGE:` in the body triggers a major release. Anything else (`chore:`, `docs:`, `ci:`, `refactor:`, `test:`) is shipped silently with no release.
-
 ## Architecture
 
 ```
