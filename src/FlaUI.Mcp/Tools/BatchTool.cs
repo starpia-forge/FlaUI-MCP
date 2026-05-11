@@ -358,7 +358,7 @@ public class BatchTool : ToolBase
         var (met, observed) = ConditionEvaluator.Evaluate(element, condition!, text);
 
         var result = AssertTool.FormatResult(met, condition!, text, observed, message!);
-        if (!met) throw new Exception(result);
+        if (!met) throw new AssertFailedException(result);
         return result;
     }
 
