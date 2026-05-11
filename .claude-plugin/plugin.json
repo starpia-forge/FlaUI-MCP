@@ -1,6 +1,6 @@
 {
   "name": "flaui-mcp",
-  "version": "0.1.0",
+  "version": "1.0.0",
   "description": "Windows desktop automation MCP server — drive UI by accessibility refs (like Playwright for Windows).",
   "author": {
     "name": "starpia-forge",
