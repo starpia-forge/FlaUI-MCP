@@ -2,7 +2,24 @@
   "permissions": {
     "allow": [
       "Bash(git *)",
-      "Bash(dotnet build *)"
+      "Bash(dotnet build *)",
+      "mcp__plugin_context7_context7__resolve-library-id",
+      "PowerShell(python --version 2>&1; node --version 2>&1)",
+      "PowerShell(taskkill *)",
+      "Bash(xargs grep -l \"VirtualKeyShort\")",
+      "Bash(grep -v \"//\")",
+      "Bash(dotnet test *)",
+      "Bash(node -e \"JSON.parse\\(require\\('fs'\\).readFileSync\\('.claude-plugin/plugin.json', 'utf8'\\)\\); console.log\\('plugin.json: OK'\\)\")",
+      "Bash(node -e \"JSON.parse\\(require\\('fs'\\).readFileSync\\('.claude-plugin/marketplace.json', 'utf8'\\)\\); console.log\\('marketplace.json: OK'\\)\")",
+      "Bash(node -e \"JSON.parse\\(require\\('fs'\\).readFileSync\\('.releaserc.json'\\)\\); console.log\\('.releaserc.json: OK'\\)\")",
+      "Bash(node scripts/sync-plugin-version.mjs 9.9.9)",
+      "Bash(gh run *)",
+      "PowerShell(gh run *)",
+      "Bash(/c/Program Files/GitHub CLI/gh.exe run *)",
+      "Bash(/c/Program Files/GitHub CLI/gh.exe auth *)",
+      "Bash(curl *)",
+      "Bash(python -c \"import json,sys; d=json.load\\(sys.stdin\\); print\\(f'total_count: {d.get\\(\\\\\"total_count\\\\\"\\)}'\\); [print\\(f'{r[\\\\\"id\\\\\"]} | {r[\\\\\"name\\\\\"]:25s} | event={r[\\\\\"event\\\\\"]:18s} | branch={r[\\\\\"head_branch\\\\\"]:10s} | status={r[\\\\\"status\\\\\"]:12s} | conclusion={r[\\\\\"conclusion\\\\\"]} | sha={r[\\\\\"head_sha\\\\\"][:8]} | {r[\\\\\"created_at\\\\\"]}'\\) for r in d.get\\('workflow_runs',[]\\)]\")",
+      "PowerShell(Get-Item *)"
     ]
   }
 }

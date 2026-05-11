@@ -50,10 +50,14 @@ Desktop.ini
 TestFlaUI/
 *.csx
 
-# Local artifacts (Claude / debugging / ad-hoc scripts)
+# AI
+.claude/
+claudedocs/
+
+# MCP
+.serena/
+
+# Local artifacts (debugging / ad-hoc scripts)
 PROJECT_INDEX.md
 snapshot_debug.txt
 test_mcp.py
-claudedocs/
-.claude/
-.serena/
