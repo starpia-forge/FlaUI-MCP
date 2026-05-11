@@ -49,3 +49,9 @@ Desktop.ini
 # Session files
 TestFlaUI/
 *.csx
+
+# Local artifacts (Claude / debugging / ad-hoc scripts)
+PROJECT_INDEX.md
+snapshot_debug.txt
+test_mcp.py
+claudedocs/
