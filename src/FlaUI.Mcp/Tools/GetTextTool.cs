@@ -54,17 +54,7 @@ public class GetTextTool : ToolBase
         {
             var text = ActionExecutor.ExecuteWithRetry(
                 _elementRegistry, _sessionManager, refId,
-                e =>
-                {
-                    string? result = null;
-                    if (e.Patterns.Value.IsSupported)
-                        result = e.Patterns.Value.Pattern.Value.ValueOrDefault;
-                    if (string.IsNullOrEmpty(result))
-                        result = e.Properties.Name.ValueOrDefault;
-                    if (string.IsNullOrEmpty(result) && e.Patterns.Text.IsSupported)
-                        result = e.Patterns.Text.Pattern.DocumentRange.GetText(-1);
-                    return result ?? "";
-                },
+                e => TextExtractor.GetText(e),
                 timeoutMs);
             return Task.FromResult(TextResult(text));
         }

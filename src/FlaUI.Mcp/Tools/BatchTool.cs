@@ -1,6 +1,7 @@
 using System.Text.Json;
 using FlaUI.Core.AutomationElements;
 using FlaUI.Mcp.Core;
+using FlaUI.Mcp.Tools;
 
 namespace FlaUI.Mcp.Tools;
 
@@ -24,7 +25,8 @@ public class BatchTool : ToolBase
 
     public override string Description =>
         "Execute multiple actions in a single call. Much faster than individual calls. " +
-        "Supports click, type, fill, wait, and snapshot actions. Returns results for each action.";
+        "Supports click, type, fill, wait, waitFor, snapshot, keys, hover, scroll, assert, and drag actions. " +
+        "Returns results for each action.";
 
     public override object InputSchema => new
     {
@@ -43,7 +45,7 @@ public class BatchTool : ToolBase
                         action = new
                         {
                             type = "string",
-                            @enum = new[] { "click", "type", "fill", "wait", "snapshot" },
+                            @enum = new[] { "click", "type", "fill", "wait", "waitFor", "snapshot", "keys", "hover", "scroll", "assert", "drag" },
                             description = "Action type"
                         },
                         @ref = new
@@ -85,8 +87,70 @@ public class BatchTool : ToolBase
                         handle = new
                         {
                             type = "string",
-                            description = "Window handle for snapshot action"
-                        }
+                            description = "Window handle for snapshot / waitFor / assert actions"
+                        },
+                        condition = new
+                        {
+                            type = "string",
+                            description = "Condition for waitFor / assert actions (visible, hidden, enabled, disabled, exists, missing, textEquals, textContains, checked, unchecked)"
+                        },
+                        selector = new
+                        {
+                            type = "object",
+                            description = "Element locator {name?, automationId?, role?} for waitFor / assert when no ref is available"
+                        },
+                        timeoutMs = new
+                        {
+                            type = "integer",
+                            description = "Per-action timeout override in milliseconds"
+                        },
+                        pollMs = new
+                        {
+                            type = "integer",
+                            description = "Poll interval for waitFor action (default: 100ms)"
+                        },
+                        message = new
+                        {
+                            type = "string",
+                            description = "Assertion label for assert action"
+                        },
+                        keys = new
+                        {
+                            type = "string",
+                            description = "Key chord(s) for keys action (e.g. 'Ctrl+S', 'Tab')"
+                        },
+                        durationMs = new
+                        {
+                            type = "integer",
+                            description = "Linger duration for hover action (default: 200ms) or drag smoothness (default: 300ms)"
+                        },
+                        direction = new
+                        {
+                            type = "string",
+                            description = "Scroll direction: up, down, left, right"
+                        },
+                        amount = new
+                        {
+                            type = "integer",
+                            description = "Scroll steps for scroll action (default: 3)"
+                        },
+                        usePattern = new
+                        {
+                            type = "boolean",
+                            description = "Prefer ScrollPattern for scroll action (default: true)"
+                        },
+                        fromRef = new
+                        {
+                            type = "string",
+                            description = "Source element ref for drag action"
+                        },
+                        toRef = new
+                        {
+                            type = "string",
+                            description = "Target element ref for drag action"
+                        },
+                        toX = new { type = "integer", description = "Target X coordinate for drag action" },
+                        toY = new { type = "integer", description = "Target Y coordinate for drag action" }
                     },
                     required = new[] { "action" }
                 }
@@ -126,13 +190,22 @@ public class BatchTool : ToolBase
             try
             {
                 var actionType = actionObj.GetProperty("action").GetString();
+                var actionTimeout = actionObj.TryGetProperty("timeoutMs", out var atProp)
+                    ? atProp.GetInt32() : timeoutMs;
+
                 var result = actionType switch
                 {
-                    "click"    => ExecuteClick(actionObj, timeoutMs),
-                    "type"     => ExecuteType(actionObj, timeoutMs),
-                    "fill"     => ExecuteFill(actionObj, timeoutMs),
+                    "click"    => ExecuteClick(actionObj, actionTimeout),
+                    "type"     => ExecuteType(actionObj, actionTimeout),
+                    "fill"     => ExecuteFill(actionObj, actionTimeout),
                     "wait"     => ExecuteWait(actionObj),
+                    "waitFor"  => ExecuteWaitFor(actionObj, actionTimeout),
                     "snapshot" => ExecuteSnapshot(actionObj),
+                    "keys"     => ExecuteKeys(actionObj, actionTimeout),
+                    "hover"    => ExecuteHover(actionObj, actionTimeout),
+                    "scroll"   => ExecuteScroll(actionObj, actionTimeout),
+                    "assert"   => ExecuteAssert(actionObj),
+                    "drag"     => ExecuteDrag(actionObj, actionTimeout),
                     _          => $"Unknown action: {actionType}"
                 };
                 results.Add($"{index + 1}. {actionType}: {result}");
@@ -201,6 +274,171 @@ public class BatchTool : ToolBase
         var ms = action.TryGetProperty("ms", out var mp) ? mp.GetInt32() : 100;
         Thread.Sleep(ms);
         return $"Waited {ms}ms";
+    }
+
+    private string ExecuteWaitFor(JsonElement action, int timeoutMs)
+    {
+        var condition = action.TryGetProperty("condition", out var cp) ? cp.GetString() : null;
+        if (string.IsNullOrEmpty(condition)) return "Missing condition for waitFor";
+
+        var refId    = action.TryGetProperty("ref",      out var rp) ? rp.GetString() : null;
+        var handle   = action.TryGetProperty("handle",   out var hp) ? hp.GetString() : null;
+        var text     = action.TryGetProperty("text",     out var tp) ? tp.GetString() : null;
+        var pollMs   = action.TryGetProperty("pollMs",   out var pp) ? pp.GetInt32()  : 100;
+        var waitTimeout = action.TryGetProperty("timeoutMs", out var wt) ? wt.GetInt32() : timeoutMs;
+
+        string? selectorName = null, selectorAutoId = null, selectorRole = null;
+        if (action.TryGetProperty("selector", out var selEl))
+        {
+            if (selEl.TryGetProperty("name",         out var np)) selectorName   = np.GetString();
+            if (selEl.TryGetProperty("automationId", out var ap)) selectorAutoId = ap.GetString();
+            if (selEl.TryGetProperty("role",         out var rop)) selectorRole  = rop.GetString();
+        }
+
+        string lastObserved = "not polled";
+        var started = DateTime.UtcNow;
+        bool met = ActionExecutor.WaitUntil(() =>
+        {
+            var element = ResolveForWait(refId, handle, selectorName, selectorAutoId, selectorRole);
+            var (result, observed) = ConditionEvaluator.Evaluate(element, condition, text);
+            lastObserved = observed;
+            return result;
+        }, waitTimeout, pollMs);
+
+        var elapsed = (int)(DateTime.UtcNow - started).TotalMilliseconds;
+        if (met) return $"Condition '{condition}' met after {elapsed}ms. Last: {lastObserved}";
+        throw new TimeoutException(
+            $"Timed out after {waitTimeout}ms waiting for '{condition}'. Last: {lastObserved}");
+    }
+
+    private string ExecuteKeys(JsonElement action, int timeoutMs)
+    {
+        var keys = action.TryGetProperty("keys", out var kp) ? kp.GetString() : null;
+        if (string.IsNullOrEmpty(keys)) return "Missing keys";
+
+        var refId = action.TryGetProperty("ref", out var rp) ? rp.GetString() : null;
+        if (!string.IsNullOrEmpty(refId))
+        {
+            ActionExecutor.ExecuteWithRetry(
+                _elementRegistry, _sessionManager, refId,
+                e => { e.Focus(); Thread.Sleep(50); return true; }, timeoutMs);
+        }
+        KeysTool.SendKeys(keys);
+        return $"Sent keys: {keys}";
+    }
+
+    private string ExecuteHover(JsonElement action, int timeoutMs)
+    {
+        var refId = action.TryGetProperty("ref", out var rp) ? rp.GetString() : null;
+        if (string.IsNullOrEmpty(refId)) return "Missing ref";
+        var durationMs = action.TryGetProperty("durationMs", out var dp) ? dp.GetInt32() : 200;
+        return ActionExecutor.ExecuteWithRetry(
+            _elementRegistry, _sessionManager, refId,
+            e => HoverStrategy.Hover(e, refId, durationMs), timeoutMs);
+    }
+
+    private string ExecuteScroll(JsonElement action, int timeoutMs)
+    {
+        var refId     = action.TryGetProperty("ref",        out var rp) ? rp.GetString() : null;
+        var direction = action.TryGetProperty("direction",  out var dp) ? dp.GetString() : null;
+        if (string.IsNullOrEmpty(refId) || string.IsNullOrEmpty(direction))
+            return "Missing ref or direction";
+        var amount     = action.TryGetProperty("amount",     out var ap) ? ap.GetInt32()    : 3;
+        var usePattern = !action.TryGetProperty("usePattern", out var up) || up.GetBoolean();
+        return ActionExecutor.ExecuteWithRetry(
+            _elementRegistry, _sessionManager, refId,
+            e => ScrollStrategy.Scroll(e, refId, direction, amount, usePattern), timeoutMs);
+    }
+
+    private string ExecuteAssert(JsonElement action)
+    {
+        var condition = action.TryGetProperty("condition", out var cp) ? cp.GetString() : null;
+        if (string.IsNullOrEmpty(condition)) return "Missing condition";
+
+        var refId   = action.TryGetProperty("ref",     out var rp) ? rp.GetString() : null;
+        var handle  = action.TryGetProperty("handle",  out var hp) ? hp.GetString() : null;
+        var text    = action.TryGetProperty("text",    out var tp) ? tp.GetString() : null;
+        var message = action.TryGetProperty("message", out var mp) ? mp.GetString() : condition;
+
+        string? selectorName = null, selectorAutoId = null, selectorRole = null;
+        if (action.TryGetProperty("selector", out var selEl))
+        {
+            if (selEl.TryGetProperty("name",         out var np)) selectorName   = np.GetString();
+            if (selEl.TryGetProperty("automationId", out var ap)) selectorAutoId = ap.GetString();
+            if (selEl.TryGetProperty("role",         out var rop)) selectorRole  = rop.GetString();
+        }
+
+        var element = ResolveForWait(refId, handle, selectorName, selectorAutoId, selectorRole);
+        var (met, observed) = ConditionEvaluator.Evaluate(element, condition!, text);
+
+        var label  = met ? "PASS" : "FAIL";
+        var detail = text != null ? $"'{condition}'='{text}', observed: {observed}" : $"'{condition}', observed: {observed}";
+        var result = $"ASSERT [{label}] {message}: {detail}";
+
+        if (!met) throw new Exception(result);
+        return result;
+    }
+
+    private string ExecuteDrag(JsonElement action, int timeoutMs)
+    {
+        var fromRef = action.TryGetProperty("fromRef", out var frp) ? frp.GetString() : null;
+        if (string.IsNullOrEmpty(fromRef)) return "Missing fromRef";
+
+        var toRef = action.TryGetProperty("toRef", out var trp) ? trp.GetString() : null;
+        int? toX  = action.TryGetProperty("toX", out var txp)   ? txp.GetInt32()  : null;
+        int? toY  = action.TryGetProperty("toY", out var typ)   ? typ.GetInt32()  : null;
+        var durationMs = action.TryGetProperty("durationMs", out var dp) ? dp.GetInt32() : 300;
+
+        if (string.IsNullOrEmpty(toRef) && (toX == null || toY == null))
+            return "Missing toRef or toX/toY";
+
+        System.Drawing.Point? toPoint = null;
+        string toName = toRef ?? $"({toX}, {toY})";
+
+        if (!string.IsNullOrEmpty(toRef))
+        {
+            ActionExecutor.ExecuteWithRetry(
+                _elementRegistry, _sessionManager, toRef,
+                e => { toPoint = e.GetClickablePoint(); toName = e.Properties.Name.ValueOrDefault ?? toRef; return true; },
+                timeoutMs);
+        }
+        else
+        {
+            toPoint = new System.Drawing.Point(toX!.Value, toY!.Value);
+        }
+
+        return ActionExecutor.ExecuteWithRetry(
+            _elementRegistry, _sessionManager, fromRef,
+            e => DragStrategy.Drag(e, fromRef, toPoint!.Value, toName, durationMs), timeoutMs);
+    }
+
+    private AutomationElement? ResolveForWait(
+        string? refId, string? handle,
+        string? selectorName, string? selectorAutoId, string? selectorRole)
+    {
+        if (!string.IsNullOrEmpty(refId))
+        {
+            var entry = _elementRegistry.GetEntry(refId);
+            if (entry == null) return null;
+            try
+            {
+                _ = entry.Element.Properties.IsEnabled.ValueOrDefault;
+                return entry.Element;
+            }
+            catch
+            {
+                var refreshed = entry.TryResolve(_sessionManager);
+                if (refreshed != null) entry.Element = refreshed;
+                return refreshed;
+            }
+        }
+        if (!string.IsNullOrEmpty(handle))
+        {
+            var window = _sessionManager.GetWindow(handle);
+            if (window == null) return null;
+            return ConditionEvaluator.FindBySelector(window, selectorName, selectorAutoId, selectorRole);
+        }
+        return null;
     }
 
     private string ExecuteSnapshot(JsonElement action)

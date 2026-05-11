@@ -19,6 +19,12 @@ toolRegistry.RegisterTool(new ListWindowsTool(sessionManager));
 toolRegistry.RegisterTool(new FocusWindowTool(sessionManager));
 toolRegistry.RegisterTool(new CloseWindowTool(sessionManager));
 toolRegistry.RegisterTool(new BatchTool(sessionManager, elementRegistry));
+toolRegistry.RegisterTool(new WaitForTool(sessionManager, elementRegistry));
+toolRegistry.RegisterTool(new KeysTool(sessionManager, elementRegistry));
+toolRegistry.RegisterTool(new HoverTool(sessionManager, elementRegistry));
+toolRegistry.RegisterTool(new ScrollTool(sessionManager, elementRegistry));
+toolRegistry.RegisterTool(new AssertTool(sessionManager, elementRegistry));
+toolRegistry.RegisterTool(new DragTool(sessionManager, elementRegistry));
 
 // Create and run MCP server
 var server = new McpServer(toolRegistry);

@@ -114,6 +114,12 @@ Or using `dotnet run`:
 | `windows_focus` | Bring a window to foreground |
 | `windows_close` | Close a window |
 | `windows_batch` | Execute multiple actions in one call |
+| `windows_wait_for` | Poll until a condition holds (visible, enabled, textContains, …) |
+| `windows_keys` | Send keyboard shortcuts or sequences (`Ctrl+S`, `Alt+F4`, `Tab`) |
+| `windows_hover` | Move mouse over an element to trigger hover-only UI |
+| `windows_scroll` | Scroll within an element (UIA ScrollPattern or mouse wheel) |
+| `windows_assert` | One-shot structured PASS/FAIL condition check |
+| `windows_drag` | Drag from one element to another or to absolute coordinates |
 
 ## How It Works
 
@@ -165,7 +171,7 @@ dotnet run --project src/FlaUI.Mcp
 dotnet test FlaUI.Mcp.sln
 ```
 
-Unit tests live under `tests/FlaUI.Mcp.Tests/` (xUnit) and cover `ElementRegistry` and `SnapshotBuilder` helpers. The CI workflow runs them automatically for the `win-x64` matrix leg.
+Unit tests live under `tests/FlaUI.Mcp.Tests/` (xUnit) and cover `ElementRegistry`, `SnapshotBuilder`, `ConditionEvaluator`, and `KeyMap` helpers. The CI workflow runs them automatically for the `win-x64` matrix leg.
 
 ## Changes from upstream
 
@@ -186,7 +192,15 @@ This fork diverges from [shanselman/FlaUI-MCP](https://github.com/shanselman/Fla
 - Solution file (`FlaUI.Mcp.sln`) added; source folder renamed from `src/PlaywrightWindows.Mcp` to `src/FlaUI.Mcp`; namespace renamed from `PlaywrightWindows.Mcp` to `FlaUI.Mcp`.
 
 **Tests**
-- `tests/FlaUI.Mcp.Tests/` added with xUnit coverage for `ElementRegistry` and `SnapshotBuilder` helpers.
+- `tests/FlaUI.Mcp.Tests/` added with xUnit coverage for `ElementRegistry`, `SnapshotBuilder`, `ConditionEvaluator`, and `KeyMap` helpers.
+
+**New tools (QA gap-fillers)**
+- `windows_wait_for` — polls until a named condition holds (visible/hidden/enabled/textContains/…), with configurable timeout and per-poll interval. Eliminates fixed-sleep patterns for async UI flows.
+- `windows_keys` — sends keyboard shortcuts and sequences using chord syntax (`Ctrl+S`, `Alt+F4`, `Ctrl+Shift+N`, `Tab`).
+- `windows_hover` — moves the mouse over an element to trigger hover-only UI (tooltips, fly-out menus).
+- `windows_scroll` — scrolls within an element via UIA `ScrollPattern` (preferred) or mouse wheel fallback.
+- `windows_assert` — one-shot structured PASS/FAIL condition check; integrates with `windows_batch` `stopOnError` for test-suite-style batch workflows.
+- `windows_drag` — drags from one element to another (or to absolute coordinates) using interpolated mouse movement.
 
 ### Contributing to this fork
 

@@ -1,4 +1,5 @@
 using FlaUI.Core.AutomationElements;
+using FlaUI.Core.Definitions;
 using FlaUI.Core.Input;
 using FlaUI.Core.WindowsAPI;
 
@@ -96,5 +97,97 @@ public static class FillStrategy
         Keyboard.TypeSimultaneously(VirtualKeyShort.CONTROL, VirtualKeyShort.KEY_A);
         Keyboard.Type(value);
         return $"Filled {name} with \"{value}\"";
+    }
+}
+
+/// <summary>
+/// Shared hover logic used by HoverTool and the batch "hover" action.
+/// </summary>
+public static class HoverStrategy
+{
+    public static string Hover(AutomationElement element, string refId, int durationMs)
+    {
+        var name = element.Properties.Name.ValueOrDefault ?? refId;
+        var point = element.GetClickablePoint();
+        Mouse.Position = point;
+        Thread.Sleep(durationMs);
+        return $"Hovered {name}";
+    }
+}
+
+/// <summary>
+/// Shared scroll logic used by ScrollTool and the batch "scroll" action.
+/// Prefers UIA ScrollPattern; falls back to mouse wheel for vertical scrolling.
+/// </summary>
+public static class ScrollStrategy
+{
+    public static string Scroll(AutomationElement element, string refId,
+        string direction, int amount, bool usePattern)
+    {
+        var name = element.Properties.Name.ValueOrDefault ?? refId;
+
+        if (usePattern && element.Patterns.Scroll.IsSupported)
+        {
+            var scroll = element.Patterns.Scroll.Pattern;
+            for (int i = 0; i < amount; i++)
+            {
+                switch (direction)
+                {
+                    case "up":    scroll.Scroll(ScrollAmount.NoAmount, ScrollAmount.SmallDecrement); break;
+                    case "down":  scroll.Scroll(ScrollAmount.NoAmount, ScrollAmount.SmallIncrement); break;
+                    case "left":  scroll.Scroll(ScrollAmount.SmallDecrement, ScrollAmount.NoAmount); break;
+                    case "right": scroll.Scroll(ScrollAmount.SmallIncrement, ScrollAmount.NoAmount); break;
+                }
+            }
+            return $"Scrolled {name} {direction} x{amount} (pattern)";
+        }
+
+        // Mouse wheel fallback — horizontal requires ScrollPattern, not exposed via wheel
+        if (direction is "left" or "right")
+            throw new NotSupportedException(
+                $"Horizontal scroll requires ScrollPattern support. " +
+                $"Set usePattern:true or ensure the element supports UIA ScrollPattern.");
+
+        var pt = element.GetClickablePoint();
+        Mouse.Position = pt;
+        int wheelClicks = direction == "up" ? amount : -amount;
+        Mouse.Scroll(wheelClicks);
+
+        return $"Scrolled {name} {direction} x{amount} (mouse wheel)";
+    }
+}
+
+/// <summary>
+/// Shared drag logic used by DragTool and the batch "drag" action.
+/// Uses press + interpolated move + release for reliable drag behavior.
+/// </summary>
+public static class DragStrategy
+{
+    public static string Drag(AutomationElement fromElement, string fromRefId,
+        System.Drawing.Point toPoint, string toName, int durationMs)
+    {
+        var fromName = fromElement.Properties.Name.ValueOrDefault ?? fromRefId;
+        var fromPoint = fromElement.GetClickablePoint();
+
+        Mouse.Position = fromPoint;
+        Thread.Sleep(50);
+        Mouse.Down(MouseButton.Left);
+        Thread.Sleep(50);
+
+        // Interpolated move so apps listening to WM_MOUSEMOVE receive the drag
+        int steps = Math.Max(1, durationMs / 16);
+        for (int i = 1; i <= steps; i++)
+        {
+            var frac = (double)i / steps;
+            Mouse.Position = new System.Drawing.Point(
+                (int)(fromPoint.X + (toPoint.X - fromPoint.X) * frac),
+                (int)(fromPoint.Y + (toPoint.Y - fromPoint.Y) * frac));
+            Thread.Sleep(16);
+        }
+
+        Thread.Sleep(50);
+        Mouse.Up(MouseButton.Left);
+
+        return $"Dragged {fromName} → {toName}";
     }
 }
