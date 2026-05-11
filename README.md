@@ -65,7 +65,7 @@ If you use [Claude Code](https://code.claude.com/), install FlaUI-MCP as a plugi
 /plugin install flaui-mcp@flaui-mcp-marketplace
 ```
 
-Claude Code spawns the MCP server automatically. The 17 `windows_*` tools become available in your session immediately.
+Claude Code spawns the MCP server automatically. The 20 `windows_*` tools become available in your session immediately.
 
 **Prerequisite**: .NET 8.0 SDK on `PATH` (the plugin invokes `dotnet run`; the SDK builds the server from source on first launch). If you only have the .NET runtime, use the release-binary install below instead.
 
@@ -121,13 +121,16 @@ Or using `dotnet run`:
 | Tool | Description |
 |------|-------------|
 | `windows_launch` | Launch a Windows application |
+| `windows_attach` | Attach to a running process by PID or executable name; returns handles for every UIA-visible window (including hidden ones typical of tray-resident apps) |
+| `windows_tray_list` | Enumerate Windows notification-area (system tray) icons; returns refs usable with `windows_tray_invoke` |
+| `windows_tray_invoke` | Click a tray icon by ref (left/right/middle, single or double); auto-registers any window that surfaces |
 | `windows_snapshot` | Get accessibility tree with element refs |
 | `windows_click` | Click an element by ref |
 | `windows_type` | Type text into an element |
 | `windows_fill` | Clear and fill a text field |
 | `windows_get_text` | Get text content of an element |
 | `windows_screenshot` | Capture window/element as PNG |
-| `windows_list_windows` | List all open windows |
+| `windows_list_windows` | List all open windows; pass `includeHidden=true` to surface windows with empty titles (tray-resident apps) |
 | `windows_focus` | Bring a window to foreground |
 | `windows_close` | Close a window |
 | `windows_batch` | Execute multiple actions in one call |
@@ -167,6 +170,12 @@ This comes from **Windows UI Automation** - the same API screen readers use. Eac
 | **Screenshot + Vision** | Works with any app | Slow, expensive, imprecise, resolution-dependent |
 
 FlaUI-MCP uses accessibility because it's what screen readers use - it's designed for programmatic UI interaction.
+
+### Tray-Resident Apps (Discord, Slack, etc.)
+
+Apps that "minimize to tray" have no titled top-level window, so `windows_list_windows` and `windows_focus` can't find them. Use `windows_tray_list` to enumerate the notification-area icons, then `windows_tray_invoke` to click the owner — its window gets auto-registered and returned as a handle. Alternatively, attach by process name with `windows_attach { "processName": "Discord" }` and pass `includeHidden=true` to `windows_list_windows` to see hidden windows.
+
+> **Limitation:** requires the classic Explorer taskbar (Win10, or Win11 with classic taskbar). The Win11 native taskbar (22H2+) hides `Shell_TrayWnd` from UIA and is not yet supported.
 
 ## Building from Source
 
