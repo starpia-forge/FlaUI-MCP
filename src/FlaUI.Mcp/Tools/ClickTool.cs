@@ -1,6 +1,4 @@
 using System.Text.Json;
-using FlaUI.Core.AutomationElements;
-using FlaUI.Core.Input;
 using PlaywrightWindows.Mcp.Core;
 
 namespace PlaywrightWindows.Mcp.Tools;
@@ -10,18 +8,20 @@ namespace PlaywrightWindows.Mcp.Tools;
 /// </summary>
 public class ClickTool : ToolBase
 {
+    private readonly SessionManager _sessionManager;
     private readonly ElementRegistry _elementRegistry;
 
-    public ClickTool(ElementRegistry elementRegistry)
+    public ClickTool(SessionManager sessionManager, ElementRegistry elementRegistry)
     {
+        _sessionManager = sessionManager;
         _elementRegistry = elementRegistry;
     }
 
     public override string Name => "windows_click";
 
-    public override string Description => 
+    public override string Description =>
         "Click an element by its ref (from windows_snapshot). Prefers Invoke pattern for reliability, " +
-        "falls back to mouse click if needed.";
+        "falls back to mouse click if needed. Retries automatically on transient UIA errors.";
 
     public override object InputSchema => new
     {
@@ -43,6 +43,11 @@ public class ClickTool : ToolBase
             {
                 type = "boolean",
                 description = "Whether to double-click (default: false)"
+            },
+            timeoutMs = new
+            {
+                type = "integer",
+                description = "Operation timeout in milliseconds (default: 5000)"
             }
         },
         required = new[] { "ref" }
@@ -52,65 +57,19 @@ public class ClickTool : ToolBase
     {
         var refId = GetStringArgument(arguments, "ref");
         if (string.IsNullOrEmpty(refId))
-        {
             return Task.FromResult(ErrorResult("Missing required argument: ref"));
-        }
 
         var button = GetStringArgument(arguments, "button") ?? "left";
         var doubleClick = GetBoolArgument(arguments, "doubleClick", false);
-
-        var element = _elementRegistry.GetElement(refId);
-        if (element == null)
-        {
-            return Task.FromResult(ErrorResult($"Element not found: {refId}. Run windows_snapshot to refresh element refs."));
-        }
+        var timeoutMs = GetArgument<int?>(arguments, "timeoutMs") ?? ActionExecutor.DefaultTimeoutMs;
 
         try
         {
-            var elementName = element.Properties.Name.ValueOrDefault ?? refId;
-
-            // Try Invoke pattern first (most reliable for buttons)
-            if (button == "left" && !doubleClick && element.Patterns.Invoke.IsSupported)
-            {
-                element.Patterns.Invoke.Pattern.Invoke();
-                return Task.FromResult(TextResult($"Invoked {elementName}"));
-            }
-
-            // Try Toggle pattern for checkboxes
-            if (button == "left" && !doubleClick && element.Patterns.Toggle.IsSupported)
-            {
-                element.Patterns.Toggle.Pattern.Toggle();
-                var newState = element.Patterns.Toggle.Pattern.ToggleState.ValueOrDefault;
-                return Task.FromResult(TextResult($"Toggled {elementName} to {newState}"));
-            }
-
-            // Try SelectionItem pattern for list items
-            if (button == "left" && !doubleClick && element.Patterns.SelectionItem.IsSupported)
-            {
-                element.Patterns.SelectionItem.Pattern.Select();
-                return Task.FromResult(TextResult($"Selected {elementName}"));
-            }
-
-            // Fall back to mouse click
-            var clickPoint = element.GetClickablePoint();
-            
-            var mouseButton = button switch
-            {
-                "right" => MouseButton.Right,
-                "middle" => MouseButton.Middle,
-                _ => MouseButton.Left
-            };
-
-            if (doubleClick)
-            {
-                Mouse.DoubleClick(clickPoint, mouseButton);
-                return Task.FromResult(TextResult($"Double-clicked {elementName}"));
-            }
-            else
-            {
-                Mouse.Click(clickPoint, mouseButton);
-                return Task.FromResult(TextResult($"Clicked {elementName}"));
-            }
+            var msg = ActionExecutor.ExecuteWithRetry(
+                _elementRegistry, _sessionManager, refId,
+                e => ClickStrategy.Click(e, refId, button, doubleClick),
+                timeoutMs);
+            return Task.FromResult(TextResult(msg));
         }
         catch (Exception ex)
         {

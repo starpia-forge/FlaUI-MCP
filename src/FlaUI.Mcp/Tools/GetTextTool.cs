@@ -8,18 +8,20 @@ namespace PlaywrightWindows.Mcp.Tools;
 /// </summary>
 public class GetTextTool : ToolBase
 {
+    private readonly SessionManager _sessionManager;
     private readonly ElementRegistry _elementRegistry;
 
-    public GetTextTool(ElementRegistry elementRegistry)
+    public GetTextTool(SessionManager sessionManager, ElementRegistry elementRegistry)
     {
+        _sessionManager = sessionManager;
         _elementRegistry = elementRegistry;
     }
 
     public override string Name => "windows_get_text";
 
-    public override string Description => 
-        "Get the text content of an element. Returns the element's Name property, " +
-        "or for text inputs, the current value.";
+    public override string Description =>
+        "Get the text content of an element. Returns the Value pattern content for text inputs, " +
+        "or the element Name property as fallback.";
 
     public override object InputSchema => new
     {
@@ -30,6 +32,11 @@ public class GetTextTool : ToolBase
             {
                 type = "string",
                 description = "Element ref from windows_snapshot (e.g., 'w1e5')"
+            },
+            timeoutMs = new
+            {
+                type = "integer",
+                description = "Operation timeout in milliseconds (default: 5000)"
             }
         },
         required = new[] { "ref" }
@@ -39,39 +46,27 @@ public class GetTextTool : ToolBase
     {
         var refId = GetStringArgument(arguments, "ref");
         if (string.IsNullOrEmpty(refId))
-        {
             return Task.FromResult(ErrorResult("Missing required argument: ref"));
-        }
 
-        var element = _elementRegistry.GetElement(refId);
-        if (element == null)
-        {
-            return Task.FromResult(ErrorResult($"Element not found: {refId}. Run windows_snapshot to refresh element refs."));
-        }
+        var timeoutMs = GetArgument<int?>(arguments, "timeoutMs") ?? ActionExecutor.DefaultTimeoutMs;
 
         try
         {
-            string? text = null;
-
-            // Try Value pattern first (for text inputs)
-            if (element.Patterns.Value.IsSupported)
-            {
-                text = element.Patterns.Value.Pattern.Value.ValueOrDefault;
-            }
-
-            // Fall back to Name property
-            if (string.IsNullOrEmpty(text))
-            {
-                text = element.Properties.Name.ValueOrDefault;
-            }
-
-            // Try Text pattern
-            if (string.IsNullOrEmpty(text) && element.Patterns.Text.IsSupported)
-            {
-                text = element.Patterns.Text.Pattern.DocumentRange.GetText(-1);
-            }
-
-            return Task.FromResult(TextResult(text ?? ""));
+            var text = ActionExecutor.ExecuteWithRetry(
+                _elementRegistry, _sessionManager, refId,
+                e =>
+                {
+                    string? result = null;
+                    if (e.Patterns.Value.IsSupported)
+                        result = e.Patterns.Value.Pattern.Value.ValueOrDefault;
+                    if (string.IsNullOrEmpty(result))
+                        result = e.Properties.Name.ValueOrDefault;
+                    if (string.IsNullOrEmpty(result) && e.Patterns.Text.IsSupported)
+                        result = e.Patterns.Text.Pattern.DocumentRange.GetText(-1);
+                    return result ?? "";
+                },
+                timeoutMs);
+            return Task.FromResult(TextResult(text));
         }
         catch (Exception ex)
         {

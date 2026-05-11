@@ -1,6 +1,4 @@
 using System.Text.Json;
-using FlaUI.Core.Input;
-using FlaUI.Core.WindowsAPI;
 using PlaywrightWindows.Mcp.Core;
 
 namespace PlaywrightWindows.Mcp.Tools;
@@ -10,16 +8,18 @@ namespace PlaywrightWindows.Mcp.Tools;
 /// </summary>
 public class TypeTool : ToolBase
 {
+    private readonly SessionManager _sessionManager;
     private readonly ElementRegistry _elementRegistry;
 
-    public TypeTool(ElementRegistry elementRegistry)
+    public TypeTool(SessionManager sessionManager, ElementRegistry elementRegistry)
     {
+        _sessionManager = sessionManager;
         _elementRegistry = elementRegistry;
     }
 
     public override string Name => "windows_type";
 
-    public override string Description => 
+    public override string Description =>
         "Type text into an element. The element will be focused first. " +
         "Use this for typing without clearing existing content. Use windows_fill to replace content.";
 
@@ -42,6 +42,11 @@ public class TypeTool : ToolBase
             {
                 type = "boolean",
                 description = "Press Enter after typing (default: false)"
+            },
+            timeoutMs = new
+            {
+                type = "integer",
+                description = "Operation timeout in milliseconds (default: 5000)"
             }
         },
         required = new[] { "text" }
@@ -51,39 +56,24 @@ public class TypeTool : ToolBase
     {
         var text = GetStringArgument(arguments, "text");
         if (text == null)
-        {
             return Task.FromResult(ErrorResult("Missing required argument: text"));
-        }
 
         var refId = GetStringArgument(arguments, "ref");
         var submit = GetBoolArgument(arguments, "submit", false);
+        var timeoutMs = GetArgument<int?>(arguments, "timeoutMs") ?? ActionExecutor.DefaultTimeoutMs;
 
         try
         {
-            // Focus element if ref provided
             if (!string.IsNullOrEmpty(refId))
             {
-                var element = _elementRegistry.GetElement(refId);
-                if (element == null)
-                {
-                    return Task.FromResult(ErrorResult($"Element not found: {refId}. Run windows_snapshot to refresh element refs."));
-                }
-
-                element.Focus();
-                Thread.Sleep(50); // Small delay to ensure focus
+                var msg = ActionExecutor.ExecuteWithRetry(
+                    _elementRegistry, _sessionManager, refId,
+                    e => TypeStrategy.Type(e, refId, text, submit),
+                    timeoutMs);
+                return Task.FromResult(TextResult(msg));
             }
 
-            // Type the text
-            Keyboard.Type(text);
-
-            if (submit)
-            {
-                Keyboard.Press(VirtualKeyShort.ENTER);
-            }
-
-            var target = string.IsNullOrEmpty(refId) ? "focused element" : refId;
-            var action = submit ? "Typed and submitted" : "Typed";
-            return Task.FromResult(TextResult($"{action} \"{text}\" into {target}"));
+            return Task.FromResult(TextResult(TypeStrategy.TypeToFocused(text, submit)));
         }
         catch (Exception ex)
         {
@@ -97,17 +87,20 @@ public class TypeTool : ToolBase
 /// </summary>
 public class FillTool : ToolBase
 {
+    private readonly SessionManager _sessionManager;
     private readonly ElementRegistry _elementRegistry;
 
-    public FillTool(ElementRegistry elementRegistry)
+    public FillTool(SessionManager sessionManager, ElementRegistry elementRegistry)
     {
+        _sessionManager = sessionManager;
         _elementRegistry = elementRegistry;
     }
 
     public override string Name => "windows_fill";
 
-    public override string Description => 
-        "Clear and fill a text field with new value. Prefers Value pattern for reliability.";
+    public override string Description =>
+        "Clear and fill a text field with a new value. Prefers Value pattern for reliability, " +
+        "falls back to Ctrl+A + Type. Retries automatically on transient UIA errors.";
 
     public override object InputSchema => new
     {
@@ -123,6 +116,11 @@ public class FillTool : ToolBase
             {
                 type = "string",
                 description = "Value to fill"
+            },
+            timeoutMs = new
+            {
+                type = "integer",
+                description = "Operation timeout in milliseconds (default: 5000)"
             }
         },
         required = new[] { "ref", "value" }
@@ -134,43 +132,19 @@ public class FillTool : ToolBase
         var value = GetStringArgument(arguments, "value");
 
         if (string.IsNullOrEmpty(refId))
-        {
             return Task.FromResult(ErrorResult("Missing required argument: ref"));
-        }
         if (value == null)
-        {
             return Task.FromResult(ErrorResult("Missing required argument: value"));
-        }
 
-        var element = _elementRegistry.GetElement(refId);
-        if (element == null)
-        {
-            return Task.FromResult(ErrorResult($"Element not found: {refId}. Run windows_snapshot to refresh element refs."));
-        }
+        var timeoutMs = GetArgument<int?>(arguments, "timeoutMs") ?? ActionExecutor.DefaultTimeoutMs;
 
         try
         {
-            var elementName = element.Properties.Name.ValueOrDefault ?? refId;
-
-            // Try Value pattern first
-            if (element.Patterns.Value.IsSupported)
-            {
-                var valuePattern = element.Patterns.Value.Pattern;
-                if (!valuePattern.IsReadOnly.ValueOrDefault)
-                {
-                    valuePattern.SetValue(value);
-                    return Task.FromResult(TextResult($"Filled {elementName} with \"{value}\""));
-                }
-            }
-
-            // Fall back to focus + select all + type
-            element.Focus();
-            Thread.Sleep(50);
-            Keyboard.TypeSimultaneously(VirtualKeyShort.CONTROL, VirtualKeyShort.KEY_A);
-            Thread.Sleep(50);
-            Keyboard.Type(value);
-
-            return Task.FromResult(TextResult($"Filled {elementName} with \"{value}\""));
+            var msg = ActionExecutor.ExecuteWithRetry(
+                _elementRegistry, _sessionManager, refId,
+                e => FillStrategy.Fill(e, refId, value),
+                timeoutMs);
+            return Task.FromResult(TextResult(msg));
         }
         catch (Exception ex)
         {
