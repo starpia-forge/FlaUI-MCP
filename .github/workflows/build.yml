@@ -1,16 +1,15 @@
-name: Build
+name: CI
 
 on:
   push:
-    branches: [ main ]
+    branches: ['**']
   pull_request:
-    branches: [ main ]
   workflow_dispatch:
 
 jobs:
   build:
     runs-on: windows-latest
-    
+
     strategy:
       matrix:
         runtime: [win-x64, win-arm64]

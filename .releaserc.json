@@ -1,0 +1,31 @@
+{
+  "branches": ["main"],
+  "tagFormat": "v${version}",
+  "plugins": [
+    "@semantic-release/commit-analyzer",
+    "@semantic-release/release-notes-generator",
+    [
+      "@semantic-release/github",
+      {
+        "assets": [
+          {
+            "path": "artifacts/FlaUI-MCP-win-x64-*-self-contained.zip",
+            "label": "Windows x64 (self-contained, no .NET install required)"
+          },
+          {
+            "path": "artifacts/FlaUI-MCP-win-x64-*-framework-dependent.zip",
+            "label": "Windows x64 (framework-dependent, requires .NET 8 runtime)"
+          },
+          {
+            "path": "artifacts/FlaUI-MCP-win-arm64-*-self-contained.zip",
+            "label": "Windows ARM64 (self-contained, no .NET install required)"
+          },
+          {
+            "path": "artifacts/FlaUI-MCP-win-arm64-*-framework-dependent.zip",
+            "label": "Windows ARM64 (framework-dependent, requires .NET 8 runtime)"
+          }
+        ]
+      }
+    ]
+  ]
+}

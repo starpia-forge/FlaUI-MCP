@@ -1,149 +1,126 @@
-name: Release
+name: CD
 
 on:
   push:
-    tags:
-      - 'v*'
+    branches: [main]
   workflow_dispatch:
 
+permissions:
+  contents: write
+  issues: write
+  pull-requests: write
+
 jobs:
-  release:
+  version:
+    name: Determine release version
+    runs-on: ubuntu-latest
+    outputs:
+      published: ${{ steps.sr.outputs.new_release_published }}
+      version: ${{ steps.sr.outputs.new_release_version }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+
+      - name: Semantic Release (dry-run)
+        id: sr
+        uses: cycjimmy/semantic-release-action@v4
+        with:
+          dry_run: true
+          semantic_version: 24
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+  build:
+    name: Build release artifacts
+    needs: version
+    if: needs.version.outputs.published == 'true'
     runs-on: windows-latest
-    permissions:
-      contents: write
-    
     strategy:
       matrix:
-        include:
-          - runtime: win-x64
-            artifact_name: FlaUI-MCP-win-x64
-          - runtime: win-arm64
-            artifact_name: FlaUI-MCP-win-arm64
-
+        runtime: [win-x64, win-arm64]
     steps:
-    - uses: actions/checkout@v4
-      with:
-        fetch-depth: 0
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
 
-    - name: Setup .NET
-      uses: actions/setup-dotnet@v4
-      with:
-        dotnet-version: 8.0.x
+      - uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: 8.0.x
 
-    - name: Install GitVersion
-      uses: gittools/actions/gitversion/setup@v1
-      with:
-        versionSpec: '5.x'
+      - name: Restore dependencies
+        run: dotnet restore src/FlaUI.Mcp/FlaUI.Mcp.csproj
 
-    - name: Determine Version
-      id: gitversion
-      uses: gittools/actions/gitversion/execute@v1
-      with:
-        useConfigFile: true
+      - name: Publish self-contained
+        run: |
+          dotnet publish src/FlaUI.Mcp/FlaUI.Mcp.csproj `
+            --configuration Release `
+            --runtime ${{ matrix.runtime }} `
+            --self-contained true `
+            --output ./publish/self-contained `
+            -p:Version=${{ needs.version.outputs.version }} `
+            -p:PublishSingleFile=true `
+            -p:IncludeNativeLibrariesForSelfExtract=true
 
-    - name: Restore dependencies
-      run: dotnet restore src/FlaUI.Mcp/FlaUI.Mcp.csproj
+      - name: Publish framework-dependent
+        run: |
+          dotnet publish src/FlaUI.Mcp/FlaUI.Mcp.csproj `
+            --configuration Release `
+            --runtime ${{ matrix.runtime }} `
+            --self-contained false `
+            --output ./publish/framework-dependent `
+            -p:Version=${{ needs.version.outputs.version }}
 
-    - name: Publish self-contained
-      run: |
-        dotnet publish src/FlaUI.Mcp/FlaUI.Mcp.csproj `
-          --configuration Release `
-          --runtime ${{ matrix.runtime }} `
-          --self-contained true `
-          --output ./publish/self-contained `
-          -p:Version=${{ steps.gitversion.outputs.semVer }} `
-          -p:PublishSingleFile=true `
-          -p:IncludeNativeLibrariesForSelfExtract=true
+      - name: Create ZIP archives
+        shell: pwsh
+        run: |
+          $v = "${{ needs.version.outputs.version }}"
+          Compress-Archive -Path ./publish/self-contained/* -DestinationPath ./FlaUI-MCP-${{ matrix.runtime }}-$v-self-contained.zip
+          Compress-Archive -Path ./publish/framework-dependent/* -DestinationPath ./FlaUI-MCP-${{ matrix.runtime }}-$v-framework-dependent.zip
 
-    - name: Publish framework-dependent
-      run: |
-        dotnet publish src/FlaUI.Mcp/FlaUI.Mcp.csproj `
-          --configuration Release `
-          --runtime ${{ matrix.runtime }} `
-          --self-contained false `
-          --output ./publish/framework-dependent `
-          -p:Version=${{ steps.gitversion.outputs.semVer }}
+      - name: Upload release artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: release-${{ matrix.runtime }}
+          path: ./*.zip
 
-    - name: Create ZIP archives
-      run: |
-        Compress-Archive -Path ./publish/self-contained/* -DestinationPath ./${{ matrix.artifact_name }}-${{ steps.gitversion.outputs.semVer }}-self-contained.zip
-        Compress-Archive -Path ./publish/framework-dependent/* -DestinationPath ./${{ matrix.artifact_name }}-${{ steps.gitversion.outputs.semVer }}.zip
-      shell: pwsh
-
-    - name: Upload Release Artifacts
-      uses: actions/upload-artifact@v4
-      with:
-        name: release-${{ matrix.runtime }}
-        path: ./*.zip
-
-  create-release:
-    needs: release
+  release:
+    name: Create GitHub release
+    needs: [version, build]
+    if: needs.version.outputs.published == 'true'
     runs-on: ubuntu-latest
     permissions:
       contents: write
-
+      issues: write
+      pull-requests: write
     steps:
-    - uses: actions/checkout@v4
-      with:
-        fetch-depth: 0
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          persist-credentials: false
 
-    - name: Install GitVersion
-      uses: gittools/actions/gitversion/setup@v1
-      with:
-        versionSpec: '5.x'
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
 
-    - name: Determine Version
-      id: gitversion
-      uses: gittools/actions/gitversion/execute@v1
-      with:
-        useConfigFile: true
+      - name: Download release artifacts
+        uses: actions/download-artifact@v4
+        with:
+          path: artifacts
+          pattern: release-*
+          merge-multiple: true
 
-    - name: Download all artifacts
-      uses: actions/download-artifact@v4
-      with:
-        path: artifacts
-        pattern: release-*
-        merge-multiple: true
+      - name: List artifacts
+        run: ls -la artifacts/
 
-    - name: List artifacts
-      run: ls -la artifacts/
-
-    - name: Create Release
-      uses: softprops/action-gh-release@v1
-      with:
-        name: FlaUI-MCP v${{ steps.gitversion.outputs.semVer }}
-        body: |
-          ## FlaUI-MCP v${{ steps.gitversion.outputs.semVer }}
-          
-          An MCP server for Windows desktop automation using accessibility APIs.
-          
-          ### Downloads
-          
-          | Platform | Self-contained | Framework-dependent |
-          |----------|---------------|---------------------|
-          | Windows x64 | `FlaUI-MCP-win-x64-*-self-contained.zip` | `FlaUI-MCP-win-x64-*.zip` |
-          | Windows ARM64 | `FlaUI-MCP-win-arm64-*-self-contained.zip` | `FlaUI-MCP-win-arm64-*.zip` |
-          
-          - **Self-contained**: Includes .NET runtime, no prerequisites needed
-          - **Framework-dependent**: Requires .NET 8.0 runtime installed
-          
-          ### Installation
-          
-          1. Download and extract the appropriate ZIP for your platform
-          2. Add to your MCP config:
-          ```json
-          {
-            "mcpServers": {
-              "windows": {
-                "type": "local",
-                "command": "C:\\path\\to\\FlaUI.Mcp.exe",
-                "tools": ["*"]
-              }
-            }
-          }
-          ```
-          
-          See [README](https://github.com/starpia-forge/FlaUI-MCP#readme) for full documentation.
-        files: artifacts/*.zip
-        draft: false
-        prerelease: false
+      - name: Semantic Release
+        uses: cycjimmy/semantic-release-action@v4
+        with:
+          semantic_version: 24
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
