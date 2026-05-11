@@ -22,23 +22,24 @@ public class ElementRegistry
         public ControlType ControlType { get; init; }
 
         /// <summary>
-        /// Attempt to re-find the element in the window using stored locator metadata.
-        /// Returns null if re-resolution fails.
+        /// Attempt to re-find the element using stored locator metadata.
+        /// Works for both window (w*) and popup (m*) roots.
+        /// Returns null if the root is gone or re-resolution fails.
         /// </summary>
         public AutomationElement? TryResolve(SessionManager session)
         {
-            var window = session.GetWindow(WindowHandle);
-            if (window == null) return null;
+            var root = session.GetSnapshotRoot(WindowHandle);
+            if (root == null) return null;
             try
             {
                 if (!string.IsNullOrEmpty(AutomationId))
                 {
-                    var byId = window.FindFirstDescendant(cf => cf.ByAutomationId(AutomationId));
+                    var byId = root.FindFirstDescendant(cf => cf.ByAutomationId(AutomationId));
                     if (byId != null) return byId;
                 }
                 if (!string.IsNullOrEmpty(Name))
                 {
-                    return window.FindFirstDescendant(cf =>
+                    return root.FindFirstDescendant(cf =>
                         cf.ByName(Name).And(cf.ByControlType(ControlType)));
                 }
             }

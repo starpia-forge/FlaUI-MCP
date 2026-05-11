@@ -155,27 +155,51 @@ public class TrayInvokeTool : ToolBase
 
         try
         {
-            // Snapshot existing top-level windows before the click (for left-click discovery)
-            var baseline = button == "left" ? _session.SnapshotTopLevelHwnds() : null;
+            var iconName = string.IsNullOrEmpty(entry.Name) ? refId : entry.Name;
+
+            if (button == "right")
+            {
+                // Snapshot existing menus before the click for diff-based discovery
+                var menuBaseline = _session.SnapshotTopLevelMenus();
+
+                ActionExecutor.ExecuteWithRetry(
+                    _registry, _session, refId,
+                    e => ClickStrategy.Click(e, refId, button, doubleClick),
+                    ActionExecutor.DefaultTimeoutMs);
+
+                var menuElement = _session.PollForNewMenu(menuBaseline, timeoutMs);
+                if (menuElement != null)
+                {
+                    var menuHandle = _session.RegisterPopup(menuElement);
+                    return Task.FromResult(TextResult(
+                        $"Right-clicked tray icon \"{iconName}\". Context menu registered: {menuHandle}. " +
+                        $"Use windows_snapshot {{ \"handle\": \"{menuHandle}\" }} to list items, " +
+                        $"then windows_click to activate one. " +
+                        $"Any other UIA call before clicking may dismiss the menu."));
+                }
+
+                var verb = doubleClick ? "Double-right-clicked" : "Right-clicked";
+                return Task.FromResult(TextResult(
+                    $"{verb} tray icon \"{iconName}\". No context menu detected within {timeoutMs}ms. " +
+                    "Use windows_keys to navigate by keyboard, or retry."));
+            }
+
+            // Left/middle-click: snapshot existing windows for diff-based discovery
+            var windowBaseline = button == "left" ? _session.SnapshotTopLevelHwnds() : null;
 
             ActionExecutor.ExecuteWithRetry(
                 _registry, _session, refId,
                 e => ClickStrategy.Click(e, refId, button, doubleClick),
                 ActionExecutor.DefaultTimeoutMs);
 
-            var iconName = string.IsNullOrEmpty(entry.Name) ? refId : entry.Name;
-
-            if (button != "left" || baseline == null)
+            if (button != "left" || windowBaseline == null)
             {
-                var verb = doubleClick ? "Double-clicked" : button == "right" ? "Right-clicked" : "Clicked";
-                var extra = button == "right"
-                    ? " Context menu may now be open — use windows_snapshot or windows_keys to interact."
-                    : string.Empty;
-                return Task.FromResult(TextResult($"{verb} tray icon \"{iconName}\".{extra}"));
+                return Task.FromResult(TextResult(
+                    $"{(doubleClick ? "Double-clicked" : "Clicked")} tray icon \"{iconName}\" ({button})."));
             }
 
             // Discover newly-appeared window (left-click only)
-            var newWnd = _session.PollForNewWindow(baseline, timeoutMs);
+            var newWnd = _session.PollForNewWindow(windowBaseline, timeoutMs);
             if (newWnd != null)
             {
                 var handle = _session.RegisterWindow(newWnd);

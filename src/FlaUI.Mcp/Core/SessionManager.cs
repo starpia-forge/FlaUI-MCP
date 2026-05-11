@@ -16,11 +16,15 @@ public readonly record struct AttachedWindow(
 /// </summary>
 public class SessionManager : IDisposable
 {
+    private const string Win32PopupMenuClass = "#32768";
+
     private readonly UIA3Automation _automation;
     private readonly Dictionary<string, Window> _windows = new();
     private readonly Dictionary<IntPtr, string> _hwndToHandle = new();
+    private readonly Dictionary<string, AutomationElement> _popups = new();
     private readonly object _sync = new();
     private int _windowCounter = 0;
+    private int _popupCounter = 0;
 
     public SessionManager()
     {
@@ -157,6 +161,91 @@ public class SessionManager : IDisposable
         {
             return _windows.TryGetValue(handle, out var window) ? window : null;
         }
+    }
+
+    /// <summary>
+    /// Returns the snapshot root element for any handle — both window (w*) and popup (m*) handles.
+    /// </summary>
+    public AutomationElement? GetSnapshotRoot(string handle)
+    {
+        lock (_sync)
+        {
+            if (_windows.TryGetValue(handle, out var win)) return win;
+            if (_popups.TryGetValue(handle, out var popup)) return popup;
+            return null;
+        }
+    }
+
+    /// <summary>
+    /// Register a transient popup (context menu, tooltip, etc.) and return a handle like "m1".
+    /// Popups are keyed by a separate counter from windows and stored as raw AutomationElements.
+    /// </summary>
+    public string RegisterPopup(AutomationElement element)
+    {
+        lock (_sync)
+        {
+            var handle = $"m{++_popupCounter}";
+            _popups[handle] = element;
+            return handle;
+        }
+    }
+
+    /// <summary>Returns the popup element for a given "m*" handle, or null if not registered.</summary>
+    public AutomationElement? GetPopup(string handle)
+    {
+        lock (_sync) { return _popups.TryGetValue(handle, out var p) ? p : null; }
+    }
+
+    /// <summary>Remove a popup from the registry (call after dismissal).</summary>
+    public void ClearPopup(string handle)
+    {
+        lock (_sync) { _popups.Remove(handle); }
+    }
+
+    /// <summary>
+    /// Snapshot HWNDs of all currently-visible Win32 popup menus on the desktop.
+    /// Used as a baseline before triggering a right-click that may produce a context menu.
+    /// </summary>
+    public HashSet<IntPtr> SnapshotTopLevelMenus()
+    {
+        var desktop = _automation.GetDesktop();
+        return new HashSet<IntPtr>(
+            desktop
+                .FindAllChildren(cf =>
+                    cf.ByControlType(FlaUI.Core.Definitions.ControlType.Menu)
+                      .Or(cf.ByClassName(Win32PopupMenuClass)))
+                .Select(e => SafeAccess.Get(() => e.Properties.NativeWindowHandle.ValueOrDefault, IntPtr.Zero))
+                .Where(h => h != IntPtr.Zero));
+    }
+
+    /// <summary>
+    /// Poll the desktop for a new popup menu that wasn't in <paramref name="baseline"/>.
+    /// Returns the new menu element or null if none appears within <paramref name="timeoutMs"/>.
+    /// </summary>
+    public AutomationElement? PollForNewMenu(HashSet<IntPtr> baseline, int timeoutMs)
+    {
+        var deadline = DateTime.UtcNow.AddMilliseconds(timeoutMs);
+        var desktop = _automation.GetDesktop();
+        while (DateTime.UtcNow < deadline)
+        {
+            var menu = FindNewMenu(desktop, baseline);
+            if (menu != null) return menu;
+            Thread.Sleep(100);
+        }
+        return null;
+    }
+
+    private static AutomationElement? FindNewMenu(AutomationElement desktop, HashSet<IntPtr> baseline)
+    {
+        foreach (var e in desktop.FindAllChildren(cf =>
+            cf.ByControlType(FlaUI.Core.Definitions.ControlType.Menu)
+              .Or(cf.ByClassName(Win32PopupMenuClass))))
+        {
+            var hwnd = SafeAccess.Get(() => e.Properties.NativeWindowHandle.ValueOrDefault, IntPtr.Zero);
+            if (hwnd != IntPtr.Zero && !baseline.Contains(hwnd))
+                return e;
+        }
+        return null;
     }
 
     public List<(string handle, string title, string? processName)> ListWindows(bool includeHidden = false)
@@ -347,6 +436,7 @@ public class SessionManager : IDisposable
         {
             _hwndToHandle.Clear();
             _windows.Clear();
+            _popups.Clear();
         }
         _automation.Dispose();
     }

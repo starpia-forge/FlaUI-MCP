@@ -28,6 +28,8 @@ toolRegistry.RegisterTool(new HoverTool(sessionManager, elementRegistry));
 toolRegistry.RegisterTool(new ScrollTool(sessionManager, elementRegistry));
 toolRegistry.RegisterTool(new AssertTool(sessionManager, elementRegistry));
 toolRegistry.RegisterTool(new DragTool(sessionManager, elementRegistry));
+toolRegistry.RegisterTool(new ContextMenuTool(sessionManager, elementRegistry));
+toolRegistry.RegisterTool(new DismissMenuTool(sessionManager));
 
 // Create and run MCP server
 var server = new McpServer(toolRegistry);
