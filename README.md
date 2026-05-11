@@ -2,8 +2,8 @@
 
 An MCP (Model Context Protocol) server that enables AI agents to automate Windows desktop applications using accessibility APIs - the same way Playwright automates browsers.
 
-[![Build](https://github.com/shanselman/FlaUI-MCP/actions/workflows/build.yml/badge.svg)](https://github.com/shanselman/FlaUI-MCP/actions/workflows/build.yml)
-[![GitHub release](https://img.shields.io/github/v/release/shanselman/FlaUI-MCP)](https://github.com/shanselman/FlaUI-MCP/releases)
+[![Build](https://github.com/starpia-forge/FlaUI-MCP/actions/workflows/build.yml/badge.svg)](https://github.com/starpia-forge/FlaUI-MCP/actions/workflows/build.yml)
+[![GitHub release](https://img.shields.io/github/v/release/starpia-forge/FlaUI-MCP)](https://github.com/starpia-forge/FlaUI-MCP/releases)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 
 ## Why This Exists

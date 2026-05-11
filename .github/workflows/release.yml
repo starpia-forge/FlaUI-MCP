@@ -4,6 +4,7 @@ on:
   push:
     tags:
       - 'v*'
+  workflow_dispatch:
 
 jobs:
   release:
@@ -142,7 +143,7 @@ jobs:
           }
           ```
           
-          See [README](https://github.com/shanselman/FlaUI-MCP#readme) for full documentation.
+          See [README](https://github.com/starpia-forge/FlaUI-MCP#readme) for full documentation.
         files: artifacts/*.zip
         draft: false
         prerelease: false
