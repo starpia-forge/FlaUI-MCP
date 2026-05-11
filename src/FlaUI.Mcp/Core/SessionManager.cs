@@ -1,7 +1,6 @@
 using FlaUI.Core;
 using FlaUI.Core.AutomationElements;
 using FlaUI.UIA3;
-using FlaUIApplication = FlaUI.Core.Application;
 
 namespace FlaUI.Mcp.Core;
 
@@ -11,11 +10,9 @@ namespace FlaUI.Mcp.Core;
 public class SessionManager : IDisposable
 {
     private readonly UIA3Automation _automation;
-    private readonly Dictionary<string, FlaUIApplication> _applications = new();
     private readonly Dictionary<string, Window> _windows = new();
     private readonly Dictionary<IntPtr, string> _hwndToHandle = new();
     private readonly object _sync = new();
-    private int _appCounter = 0;
     private int _windowCounter = 0;
 
     public SessionManager()
@@ -220,11 +217,6 @@ public class SessionManager : IDisposable
     {
         lock (_sync)
         {
-            foreach (var app in _applications.Values)
-            {
-                try { app.Close(); } catch { }
-            }
-            _applications.Clear();
             _hwndToHandle.Clear();
             _windows.Clear();
         }

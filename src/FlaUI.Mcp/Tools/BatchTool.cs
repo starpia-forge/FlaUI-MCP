@@ -1,7 +1,5 @@
 using System.Text.Json;
-using FlaUI.Core.AutomationElements;
 using FlaUI.Mcp.Core;
-using FlaUI.Mcp.Tools;
 
 namespace FlaUI.Mcp.Tools;
 
@@ -185,8 +183,9 @@ public class BatchTool : ToolBase
         var results = new List<string>();
         var actions = actionsElement.EnumerateArray().ToList();
 
-        foreach (var (actionObj, index) in actions.Select((a, i) => (a, i)))
+        for (int index = 0; index < actions.Count; index++)
         {
+            var actionObj = actions[index];
             try
             {
                 var actionType = actionObj.GetProperty("action").GetString();
@@ -229,7 +228,7 @@ public class BatchTool : ToolBase
         var refId = action.TryGetProperty("ref", out var rp) ? rp.GetString() : null;
         if (string.IsNullOrEmpty(refId)) return "Missing ref";
 
-        var button = action.TryGetProperty("button", out var bp) ? bp.GetString() ?? "left" : "left";
+        var button      = action.TryGetProperty("button",      out var bp) ? bp.GetString() ?? "left" : "left";
         var doubleClick = action.TryGetProperty("doubleClick", out var dp) && dp.GetBoolean();
 
         return ActionExecutor.ExecuteWithRetry(
@@ -244,7 +243,7 @@ public class BatchTool : ToolBase
         if (string.IsNullOrEmpty(text)) return "Missing text";
 
         var submit = action.TryGetProperty("submit", out var sp) && sp.GetBoolean();
-        var refId = action.TryGetProperty("ref", out var rp) ? rp.GetString() : null;
+        var refId  = action.TryGetProperty("ref",    out var rp) ? rp.GetString() : null;
 
         if (!string.IsNullOrEmpty(refId))
         {
@@ -258,7 +257,7 @@ public class BatchTool : ToolBase
 
     private string ExecuteFill(JsonElement action, int timeoutMs)
     {
-        var refId = action.TryGetProperty("ref", out var rp) ? rp.GetString() : null;
+        var refId = action.TryGetProperty("ref",   out var rp) ? rp.GetString() : null;
         var value = action.TryGetProperty("value", out var vp) ? vp.GetString() : null;
 
         if (string.IsNullOrEmpty(refId) || value == null) return "Missing ref or value";
@@ -281,25 +280,19 @@ public class BatchTool : ToolBase
         var condition = action.TryGetProperty("condition", out var cp) ? cp.GetString() : null;
         if (string.IsNullOrEmpty(condition)) return "Missing condition for waitFor";
 
-        var refId    = action.TryGetProperty("ref",      out var rp) ? rp.GetString() : null;
-        var handle   = action.TryGetProperty("handle",   out var hp) ? hp.GetString() : null;
-        var text     = action.TryGetProperty("text",     out var tp) ? tp.GetString() : null;
-        var pollMs   = action.TryGetProperty("pollMs",   out var pp) ? pp.GetInt32()  : 100;
-        var waitTimeout = action.TryGetProperty("timeoutMs", out var wt) ? wt.GetInt32() : timeoutMs;
+        var refId       = action.TryGetProperty("ref",       out var rp) ? rp.GetString() : null;
+        var handle      = action.TryGetProperty("handle",    out var hp) ? hp.GetString() : null;
+        var text        = action.TryGetProperty("text",      out var tp) ? tp.GetString() : null;
+        var pollMs      = action.TryGetProperty("pollMs",    out var pp) ? pp.GetInt32()  : 100;
+        var waitTimeout = action.TryGetProperty("timeoutMs", out var wt) ? wt.GetInt32()  : timeoutMs;
 
-        string? selectorName = null, selectorAutoId = null, selectorRole = null;
-        if (action.TryGetProperty("selector", out var selEl))
-        {
-            if (selEl.TryGetProperty("name",         out var np)) selectorName   = np.GetString();
-            if (selEl.TryGetProperty("automationId", out var ap)) selectorAutoId = ap.GetString();
-            if (selEl.TryGetProperty("role",         out var rop)) selectorRole  = rop.GetString();
-        }
+        var selector = Selector.From(action);
 
         string lastObserved = "not polled";
         var started = DateTime.UtcNow;
         bool met = ActionExecutor.WaitUntil(() =>
         {
-            var element = ResolveForWait(refId, handle, selectorName, selectorAutoId, selectorRole);
+            var element = ElementResolver.Resolve(_sessionManager, _elementRegistry, refId, handle, selector);
             var (result, observed) = ConditionEvaluator.Evaluate(element, condition, text);
             lastObserved = observed;
             return result;
@@ -329,7 +322,7 @@ public class BatchTool : ToolBase
 
     private string ExecuteHover(JsonElement action, int timeoutMs)
     {
-        var refId = action.TryGetProperty("ref", out var rp) ? rp.GetString() : null;
+        var refId      = action.TryGetProperty("ref",       out var rp) ? rp.GetString() : null;
         if (string.IsNullOrEmpty(refId)) return "Missing ref";
         var durationMs = action.TryGetProperty("durationMs", out var dp) ? dp.GetInt32() : 200;
         return ActionExecutor.ExecuteWithRetry(
@@ -343,7 +336,7 @@ public class BatchTool : ToolBase
         var direction = action.TryGetProperty("direction",  out var dp) ? dp.GetString() : null;
         if (string.IsNullOrEmpty(refId) || string.IsNullOrEmpty(direction))
             return "Missing ref or direction";
-        var amount     = action.TryGetProperty("amount",     out var ap) ? ap.GetInt32()    : 3;
+        var amount     = action.TryGetProperty("amount",      out var ap) ? ap.GetInt32()    : 3;
         var usePattern = !action.TryGetProperty("usePattern", out var up) || up.GetBoolean();
         return ActionExecutor.ExecuteWithRetry(
             _elementRegistry, _sessionManager, refId,
@@ -360,21 +353,11 @@ public class BatchTool : ToolBase
         var text    = action.TryGetProperty("text",    out var tp) ? tp.GetString() : null;
         var message = action.TryGetProperty("message", out var mp) ? mp.GetString() : condition;
 
-        string? selectorName = null, selectorAutoId = null, selectorRole = null;
-        if (action.TryGetProperty("selector", out var selEl))
-        {
-            if (selEl.TryGetProperty("name",         out var np)) selectorName   = np.GetString();
-            if (selEl.TryGetProperty("automationId", out var ap)) selectorAutoId = ap.GetString();
-            if (selEl.TryGetProperty("role",         out var rop)) selectorRole  = rop.GetString();
-        }
-
-        var element = ResolveForWait(refId, handle, selectorName, selectorAutoId, selectorRole);
+        var selector = Selector.From(action);
+        var element  = ElementResolver.Resolve(_sessionManager, _elementRegistry, refId, handle, selector);
         var (met, observed) = ConditionEvaluator.Evaluate(element, condition!, text);
 
-        var label  = met ? "PASS" : "FAIL";
-        var detail = text != null ? $"'{condition}'='{text}', observed: {observed}" : $"'{condition}', observed: {observed}";
-        var result = $"ASSERT [{label}] {message}: {detail}";
-
+        var result = AssertTool.FormatResult(met, condition!, text, observed, message!);
         if (!met) throw new Exception(result);
         return result;
     }
@@ -385,8 +368,8 @@ public class BatchTool : ToolBase
         if (string.IsNullOrEmpty(fromRef)) return "Missing fromRef";
 
         var toRef = action.TryGetProperty("toRef", out var trp) ? trp.GetString() : null;
-        int? toX  = action.TryGetProperty("toX", out var txp)   ? txp.GetInt32()  : null;
-        int? toY  = action.TryGetProperty("toY", out var typ)   ? typ.GetInt32()  : null;
+        int? toX  = action.TryGetProperty("toX",   out var txp) ? txp.GetInt32()  : null;
+        int? toY  = action.TryGetProperty("toY",   out var typ) ? typ.GetInt32()  : null;
         var durationMs = action.TryGetProperty("durationMs", out var dp) ? dp.GetInt32() : 300;
 
         if (string.IsNullOrEmpty(toRef) && (toX == null || toY == null))
@@ -412,67 +395,17 @@ public class BatchTool : ToolBase
             e => DragStrategy.Drag(e, fromRef, toPoint!.Value, toName, durationMs), timeoutMs);
     }
 
-    private AutomationElement? ResolveForWait(
-        string? refId, string? handle,
-        string? selectorName, string? selectorAutoId, string? selectorRole)
-    {
-        if (!string.IsNullOrEmpty(refId))
-        {
-            var entry = _elementRegistry.GetEntry(refId);
-            if (entry == null) return null;
-            try
-            {
-                _ = entry.Element.Properties.IsEnabled.ValueOrDefault;
-                return entry.Element;
-            }
-            catch
-            {
-                var refreshed = entry.TryResolve(_sessionManager);
-                if (refreshed != null) entry.Element = refreshed;
-                return refreshed;
-            }
-        }
-        if (!string.IsNullOrEmpty(handle))
-        {
-            var window = _sessionManager.GetWindow(handle);
-            if (window == null) return null;
-            return ConditionEvaluator.FindBySelector(window, selectorName, selectorAutoId, selectorRole);
-        }
-        return null;
-    }
-
     private string ExecuteSnapshot(JsonElement action)
     {
-        var handle = action.TryGetProperty("handle", out var hp) ? hp.GetString() : null;
+        var handle     = action.TryGetProperty("handle", out var hp) ? hp.GetString() : null;
+        var resolution = WindowResolver.ResolveOrFocused(_sessionManager, handle, registerFocused: true);
 
-        Window? window = null;
-        if (!string.IsNullOrEmpty(handle))
-        {
-            window = _sessionManager.GetWindow(handle);
-            if (window == null) return $"Window not found: {handle}";
-        }
-        else
-        {
-            var focusedElement = _sessionManager.Automation.FocusedElement();
-            if (focusedElement != null)
-            {
-                var current = focusedElement;
-                while (current != null)
-                {
-                    if (current.Properties.ControlType.ValueOrDefault == FlaUI.Core.Definitions.ControlType.Window)
-                    {
-                        window = current.AsWindow();
-                        handle = _sessionManager.RegisterWindow(window);
-                        break;
-                    }
-                    current = current.Parent;
-                }
-            }
-        }
+        if (resolution.Failure == WindowResolutionFailure.HandleNotFound)
+            return $"Window not found: {handle}";
+        if (resolution.Failure != WindowResolutionFailure.None)
+            return "No window found";
 
-        if (window == null) return "No window found";
-
-        var snapshot = _snapshotBuilder.BuildSnapshot(handle!, window);
+        var snapshot = _snapshotBuilder.BuildSnapshot(resolution.Handle!, resolution.Window!);
         return $"\n{snapshot}";
     }
 }

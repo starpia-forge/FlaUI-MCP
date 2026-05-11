@@ -48,8 +48,8 @@ public class ScreenshotTool : ToolBase
 
     public override Task<McpToolResult> ExecuteAsync(JsonElement? arguments)
     {
-        var handle = GetStringArgument(arguments, "handle");
-        var refId = GetStringArgument(arguments, "ref");
+        var handle     = GetStringArgument(arguments, "handle");
+        var refId      = GetStringArgument(arguments, "ref");
         var fullScreen = GetBoolArgument(arguments, "fullScreen", false);
 
         CaptureImage? capture = null;
@@ -63,42 +63,19 @@ public class ScreenshotTool : ToolBase
             {
                 var element = _elementRegistry.GetElement(refId);
                 if (element == null)
-                {
                     return Task.FromResult(ErrorResult($"Element not found: {refId}"));
-                }
                 capture = Capture.Element(element);
-            }
-            else if (!string.IsNullOrEmpty(handle))
-            {
-                var window = _sessionManager.GetWindow(handle);
-                if (window == null)
-                {
-                    return Task.FromResult(ErrorResult($"Window not found: {handle}"));
-                }
-                capture = Capture.Element(window);
             }
             else
             {
-                // Capture foreground window
-                var focusedElement = _sessionManager.Automation.FocusedElement();
-                if (focusedElement == null)
-                {
+                var resolution = WindowResolver.ResolveOrFocused(_sessionManager, handle, registerFocused: false);
+                if (resolution.Failure == WindowResolutionFailure.HandleNotFound)
+                    return Task.FromResult(ErrorResult($"Window not found: {handle}"));
+                if (resolution.Failure == WindowResolutionFailure.NoFocusedElement)
                     return Task.FromResult(ErrorResult("No focused window found"));
-                }
-
-                // Walk up to find the window
-                var current = focusedElement;
-                while (current != null && current.Properties.ControlType.ValueOrDefault != FlaUI.Core.Definitions.ControlType.Window)
-                {
-                    current = current.Parent;
-                }
-
-                if (current == null)
-                {
+                if (resolution.Failure == WindowResolutionFailure.NoWindowAncestor)
                     return Task.FromResult(ErrorResult("Could not find window for focused element"));
-                }
-
-                capture = Capture.Element(current);
+                capture = Capture.Element(resolution.Window!);
             }
 
             using var stream = new MemoryStream();

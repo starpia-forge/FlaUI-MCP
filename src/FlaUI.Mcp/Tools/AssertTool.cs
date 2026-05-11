@@ -1,5 +1,4 @@
 using System.Text.Json;
-using FlaUI.Core.AutomationElements;
 using FlaUI.Mcp.Core;
 
 namespace FlaUI.Mcp.Tools;
@@ -89,38 +88,20 @@ public class AssertTool : ToolBase
         var text    = GetStringArgument(arguments, "text");
         var message = GetStringArgument(arguments, "message") ?? condition;
 
-        string? selectorName = null, selectorAutoId = null, selectorRole = null;
-        if (arguments?.TryGetProperty("selector", out var selEl) == true)
-        {
-            if (selEl.TryGetProperty("name",         out var np)) selectorName   = np.GetString();
-            if (selEl.TryGetProperty("automationId", out var ap)) selectorAutoId = ap.GetString();
-            if (selEl.TryGetProperty("role",         out var rp)) selectorRole   = rp.GetString();
-        }
-
-        AutomationElement? element = ResolveElement(refId, handle, selectorName, selectorAutoId, selectorRole);
+        var selector = arguments.HasValue ? Selector.From(arguments.Value) : default;
+        var element  = ElementResolver.Resolve(_sessionManager, _elementRegistry, refId, handle, selector);
         var (met, observed) = ConditionEvaluator.Evaluate(element, condition, text);
 
-        var label = met ? "PASS" : "FAIL";
-        var detail = text != null ? $"'{condition}'='{text}', observed: {observed}" : $"'{condition}', observed: {observed}";
-        var resultText = $"ASSERT [{label}] {message}: {detail}";
-
+        var resultText = FormatResult(met, condition, text, observed, message);
         return Task.FromResult(met ? TextResult(resultText) : ErrorResult(resultText));
     }
 
-    private AutomationElement? ResolveElement(
-        string? refId, string? handle,
-        string? selectorName, string? selectorAutoId, string? selectorRole)
+    internal static string FormatResult(bool met, string condition, string? text, string observed, string message)
     {
-        if (!string.IsNullOrEmpty(refId))
-            return _elementRegistry.GetElement(refId);
-
-        if (!string.IsNullOrEmpty(handle))
-        {
-            var window = _sessionManager.GetWindow(handle);
-            if (window == null) return null;
-            return ConditionEvaluator.FindBySelector(window, selectorName, selectorAutoId, selectorRole);
-        }
-
-        return null;
+        var label  = met ? "PASS" : "FAIL";
+        var detail = text != null
+            ? $"'{condition}'='{text}', observed: {observed}"
+            : $"'{condition}', observed: {observed}";
+        return $"ASSERT [{label}] {message}: {detail}";
     }
 }

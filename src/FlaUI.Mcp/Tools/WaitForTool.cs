@@ -1,5 +1,4 @@
 using System.Text.Json;
-using FlaUI.Core.AutomationElements;
 using FlaUI.Mcp.Core;
 
 namespace FlaUI.Mcp.Tools;
@@ -88,26 +87,19 @@ public class WaitForTool : ToolBase
             return Task.FromResult(ErrorResult(
                 $"Unknown condition '{condition}'. Valid: {string.Join(", ", ConditionEvaluator.ValidConditions)}"));
 
-        var refId      = GetStringArgument(arguments, "ref");
-        var handle     = GetStringArgument(arguments, "handle");
-        var text       = GetStringArgument(arguments, "text");
-        var timeoutMs  = GetArgument<int?>(arguments, "timeoutMs") ?? 10000;
-        var pollMs     = GetArgument<int?>(arguments, "pollMs") ?? 100;
+        var refId     = GetStringArgument(arguments, "ref");
+        var handle    = GetStringArgument(arguments, "handle");
+        var text      = GetStringArgument(arguments, "text");
+        var timeoutMs = GetArgument<int?>(arguments, "timeoutMs") ?? 10000;
+        var pollMs    = GetArgument<int?>(arguments, "pollMs") ?? 100;
 
-        string? selectorName = null, selectorAutoId = null, selectorRole = null;
-        if (arguments?.TryGetProperty("selector", out var selEl) == true)
-        {
-            if (selEl.TryGetProperty("name",         out var np)) selectorName    = np.GetString();
-            if (selEl.TryGetProperty("automationId", out var ap)) selectorAutoId  = ap.GetString();
-            if (selEl.TryGetProperty("role",         out var rp)) selectorRole    = rp.GetString();
-        }
+        var selector = arguments.HasValue ? Selector.From(arguments.Value) : default;
 
         var needsElement = condition is "visible" or "enabled" or "disabled"
                             or "textEquals" or "textContains" or "checked" or "unchecked";
 
         if (needsElement && string.IsNullOrEmpty(refId) &&
-            string.IsNullOrEmpty(handle) &&
-            string.IsNullOrEmpty(selectorName) && string.IsNullOrEmpty(selectorAutoId))
+            string.IsNullOrEmpty(handle) && selector.IsEmpty)
         {
             return Task.FromResult(ErrorResult(
                 $"Condition '{condition}' requires an element. Provide 'ref' or 'handle'+'selector'."));
@@ -115,11 +107,10 @@ public class WaitForTool : ToolBase
 
         var started = DateTime.UtcNow;
         string lastObserved = "not yet polled";
-        bool met = false;
 
-        met = ActionExecutor.WaitUntil(() =>
+        bool met = ActionExecutor.WaitUntil(() =>
         {
-            var element = ResolveElement(refId, handle, selectorName, selectorAutoId, selectorRole);
+            var element = ElementResolver.Resolve(_sessionManager, _elementRegistry, refId, handle, selector);
             var (result, observed) = ConditionEvaluator.Evaluate(element, condition, text);
             lastObserved = observed;
             return result;
@@ -134,37 +125,5 @@ public class WaitForTool : ToolBase
         return Task.FromResult(ErrorResult(
             $"Timed out after {timeoutMs}ms waiting for '{condition}'. " +
             $"Last observed: {lastObserved}"));
-    }
-
-    private AutomationElement? ResolveElement(
-        string? refId, string? handle,
-        string? selectorName, string? selectorAutoId, string? selectorRole)
-    {
-        if (!string.IsNullOrEmpty(refId))
-        {
-            var entry = _elementRegistry.GetEntry(refId);
-            if (entry == null) return null;
-            try
-            {
-                // Quick probe — if this throws, element is stale.
-                _ = entry.Element.Properties.IsEnabled.ValueOrDefault;
-                return entry.Element;
-            }
-            catch
-            {
-                var refreshed = entry.TryResolve(_sessionManager);
-                if (refreshed != null) entry.Element = refreshed;
-                return refreshed;
-            }
-        }
-
-        if (!string.IsNullOrEmpty(handle))
-        {
-            var window = _sessionManager.GetWindow(handle);
-            if (window == null) return null;
-            return ConditionEvaluator.FindBySelector(window, selectorName, selectorAutoId, selectorRole);
-        }
-
-        return null;
     }
 }
