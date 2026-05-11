@@ -10,7 +10,7 @@
       "name": "flaui-mcp",
       "source": "./",
       "description": "17 MCP tools for automating Windows desktop apps via UI Automation: launch, snapshot, click, type, fill, get_text, screenshot, list_windows, focus, close, batch, wait_for, keys, hover, scroll, assert, drag.",
-      "version": "1.2.1",
+      "version": "1.3.0",
       "license": "MIT",
       "homepage": "https://github.com/starpia-forge/FlaUI-MCP",
       "repository": "https://github.com/starpia-forge/FlaUI-MCP",
