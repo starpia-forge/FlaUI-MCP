@@ -55,3 +55,4 @@ PROJECT_INDEX.md
 snapshot_debug.txt
 test_mcp.py
 claudedocs/
+.claude/
