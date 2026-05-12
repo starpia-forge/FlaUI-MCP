@@ -24,6 +24,7 @@ toolRegistry.RegisterTool(new ScreenshotTool(sessionManager, elementRegistry));
 toolRegistry.RegisterTool(new ListWindowsTool(sessionManager));
 toolRegistry.RegisterTool(new FocusWindowTool(sessionManager));
 toolRegistry.RegisterTool(new CloseWindowTool(sessionManager));
+toolRegistry.RegisterTool(new WindowStateTool(sessionManager));
 toolRegistry.RegisterTool(new BatchTool(sessionManager, elementRegistry));
 toolRegistry.RegisterTool(new WaitForTool(sessionManager, elementRegistry));
 toolRegistry.RegisterTool(new KeysTool(sessionManager, elementRegistry));
