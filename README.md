@@ -65,7 +65,7 @@ If you use [Claude Code](https://code.claude.com/), install FlaUI-MCP as a plugi
 /plugin install flaui-mcp@flaui-mcp-marketplace
 ```
 
-Claude Code spawns the MCP server automatically. The 27 `windows_*` tools become available in your session immediately.
+Claude Code spawns the MCP server automatically. The 29 `windows_*` tools become available in your session immediately.
 
 **Prerequisite**: .NET 8.0 SDK on `PATH` (the plugin invokes `dotnet run`; the SDK builds the server from source on first launch). If you only have the .NET runtime, use the release-binary install below instead.
 
@@ -150,6 +150,13 @@ Or using `dotnet run`:
 |------|-------------|
 | `windows_get_value` | Read an element's current value via UIA patterns (Value → RangeValue → Toggle → SelectionItem); use instead of `windows_get_text` for sliders, checkboxes, and combo boxes |
 | `windows_set_value` | Set an element's value — string → Value/SelectionItem pattern, number → RangeValue (slider), boolean → Toggle (checkbox) |
+
+### Clipboard
+
+| Tool | Description |
+|------|-------------|
+| `windows_get_clipboard` | Read system clipboard text content (CF_UNICODETEXT); returns an explicit message when the clipboard is empty or contains non-text data |
+| `windows_set_clipboard` | Write text to the system clipboard; empty string clears the clipboard |
 
 ### Mouse
 

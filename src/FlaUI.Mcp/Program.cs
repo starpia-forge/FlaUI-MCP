@@ -21,6 +21,8 @@ toolRegistry.RegisterTool(new FillTool(sessionManager, elementRegistry));
 toolRegistry.RegisterTool(new GetTextTool(sessionManager, elementRegistry));
 toolRegistry.RegisterTool(new GetValueTool(sessionManager, elementRegistry));
 toolRegistry.RegisterTool(new SetValueTool(sessionManager, elementRegistry));
+toolRegistry.RegisterTool(new GetClipboardTool());
+toolRegistry.RegisterTool(new SetClipboardTool());
 toolRegistry.RegisterTool(new ScreenshotTool(sessionManager, elementRegistry));
 toolRegistry.RegisterTool(new ListWindowsTool(sessionManager));
 toolRegistry.RegisterTool(new FocusWindowTool(sessionManager));
