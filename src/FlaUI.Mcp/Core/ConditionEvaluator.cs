@@ -12,7 +12,7 @@ public static class ConditionEvaluator
     public static readonly IReadOnlyList<string> ValidConditions =
     [
         "visible", "hidden", "enabled", "disabled",
-        "exists", "missing", "notExists",
+        "exists", "missing",
         "textEquals", "textContains",
         "checked", "unchecked",
         "valueEquals", "expanded", "focused", "selectionContains"
@@ -90,9 +90,6 @@ public static class ConditionEvaluator
                 var isChecked = ReadCheckedState(element);
                 return (!isChecked, isChecked ? "checked" : "unchecked");
             }
-
-            case "notExists":
-                goto case "missing";
 
             case "valueEquals":
             {

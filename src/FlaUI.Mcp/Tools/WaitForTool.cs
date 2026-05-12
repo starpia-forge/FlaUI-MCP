@@ -35,7 +35,7 @@ public class WaitForTool : ToolBase
             {
                 type = "string",
                 @enum = ConditionEvaluator.ValidConditions,
-                description = "Predicate: visible|hidden|enabled|disabled|exists|missing|notExists|textEquals|textContains|checked|unchecked|valueEquals|expanded|focused|selectionContains"
+                description = "Predicate: visible|hidden|enabled|disabled|exists|missing|textEquals|textContains|checked|unchecked|valueEquals|expanded|focused|selectionContains"
             },
             @ref = new
             {

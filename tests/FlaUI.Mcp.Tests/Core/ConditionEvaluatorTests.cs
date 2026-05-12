@@ -12,7 +12,6 @@ public class ConditionEvaluatorTests
     [Theory]
     [InlineData("exists",            false)]
     [InlineData("missing",           true)]
-    [InlineData("notExists",         true)]
     [InlineData("visible",           false)]
     [InlineData("hidden",            true)]
     [InlineData("enabled",           false)]
@@ -48,7 +47,7 @@ public class ConditionEvaluatorTests
         var expected = new[]
         {
             "visible", "hidden", "enabled", "disabled",
-            "exists", "missing", "notExists",
+            "exists", "missing",
             "textEquals", "textContains",
             "checked", "unchecked",
             "valueEquals", "expanded", "focused", "selectionContains"
