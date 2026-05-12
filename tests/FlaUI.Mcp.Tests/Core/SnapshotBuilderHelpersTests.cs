@@ -1,3 +1,4 @@
+using System.Drawing;
 using FlaUI.Core.Definitions;
 using FlaUI.Mcp.Core;
 using FluentAssertions;
@@ -75,5 +76,35 @@ public class SnapshotBuilderHelpersTests
     public void GetElementRole_UnknownControlType_ReturnsElement()
     {
         SnapshotBuilder.GetElementRole((ControlType)999).Should().Be("element");
+    }
+
+    // ── BuildVerboseSuffix ──────────────────────────────────────────────────
+
+    [Fact]
+    public void BuildVerboseSuffix_WithAidAndRect_IncludesBoth()
+    {
+        var result = SnapshotBuilder.BuildVerboseSuffix("Save", new RectangleF(120, 400, 80, 30));
+        result.Should().Be("[aid=Save, rect=120,400,80,30]");
+    }
+
+    [Fact]
+    public void BuildVerboseSuffix_EmptyAid_OmitsAidToken()
+    {
+        var result = SnapshotBuilder.BuildVerboseSuffix("", new RectangleF(120, 400, 80, 30));
+        result.Should().Be("[rect=120,400,80,30]");
+    }
+
+    [Fact]
+    public void BuildVerboseSuffix_ZeroRect_StillIncludesRect()
+    {
+        var result = SnapshotBuilder.BuildVerboseSuffix("Save", new RectangleF(0, 0, 0, 0));
+        result.Should().Be("[aid=Save, rect=0,0,0,0]");
+    }
+
+    [Fact]
+    public void BuildVerboseSuffix_FloatCoords_TruncatesToInt()
+    {
+        var result = SnapshotBuilder.BuildVerboseSuffix("X", new RectangleF(10.7f, 20.3f, 100.9f, 50.4f));
+        result.Should().Be("[aid=X, rect=10,20,100,50]");
     }
 }

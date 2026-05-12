@@ -1,3 +1,4 @@
+using System.Drawing;
 using System.Text;
 using FlaUI.Core.AutomationElements;
 using FlaUI.Core.Definitions;
@@ -18,24 +19,27 @@ public class SnapshotBuilder
         _maxDepth = maxDepth;
     }
 
-    public string BuildSnapshot(string windowHandle, AutomationElement root)
+    public string BuildSnapshot(string windowHandle, AutomationElement root) =>
+        BuildSnapshot(windowHandle, root, verbose: false);
+
+    public string BuildSnapshot(string windowHandle, AutomationElement root, bool verbose)
     {
         // Clear previous elements for this window
         _elementRegistry.ClearWindow(windowHandle);
 
         var sb = new StringBuilder();
-        BuildElementSnapshot(sb, windowHandle, root, 0);
+        BuildElementSnapshot(sb, windowHandle, root, 0, verbose);
         return sb.ToString();
     }
 
-    private void BuildElementSnapshot(StringBuilder sb, string windowHandle, AutomationElement element, int depth)
+    private void BuildElementSnapshot(StringBuilder sb, string windowHandle, AutomationElement element, int depth, bool verbose)
     {
         if (depth > _maxDepth) return;
 
         // Skip elements with no meaningful content
         var name = GetElementName(element);
         var role = GetElementRole(element);
-        
+
         // Skip some noise elements, but keep elements with names or important roles
         if (ShouldSkipElement(element, name, role)) return;
 
@@ -44,7 +48,7 @@ public class SnapshotBuilder
 
         // Build the line
         var indent = new string(' ', depth * 2);
-        var line = BuildElementLine(element, refId, name, role);
+        var line = BuildElementLine(element, refId, name, role, verbose);
         sb.AppendLine($"{indent}- {line}");
 
         // Process children
@@ -53,13 +57,13 @@ public class SnapshotBuilder
             var children = element.FindAllChildren();
             foreach (var child in children)
             {
-                BuildElementSnapshot(sb, windowHandle, child, depth + 1);
+                BuildElementSnapshot(sb, windowHandle, child, depth + 1, verbose);
             }
         }
         catch { /* child enumeration failed; tree may have mutated */ }
     }
 
-    private string BuildElementLine(AutomationElement element, string refId, string? name, string role)
+    private string BuildElementLine(AutomationElement element, string refId, string? name, string role, bool verbose)
     {
         var parts = new List<string>();
 
@@ -75,6 +79,15 @@ public class SnapshotBuilder
         // Ref
         parts.Add($"[ref={refId}]");
 
+        // Verbose: AutomationId + BoundingRect
+        if (verbose)
+        {
+            var aid  = SafeAccess.Get(() => element.Properties.AutomationId.ValueOrDefault ?? "", "");
+            var rect = SafeAccess.Get(() => element.Properties.BoundingRectangle.ValueOrDefault, default(RectangleF));
+            var suffix = BuildVerboseSuffix(aid, rect);
+            parts.Add(suffix);
+        }
+
         // State indicators
         var states = GetStateIndicators(element);
         if (states.Count > 0)
@@ -83,6 +96,14 @@ public class SnapshotBuilder
         }
 
         return string.Join(" ", parts);
+    }
+
+    internal static string BuildVerboseSuffix(string automationId, RectangleF rect)
+    {
+        var rectStr = $"rect={(int)rect.X},{(int)rect.Y},{(int)rect.Width},{(int)rect.Height}";
+        return string.IsNullOrEmpty(automationId)
+            ? $"[{rectStr}]"
+            : $"[aid={automationId}, {rectStr}]";
     }
 
     internal static string GetElementRole(ControlType controlType) => Roles.ToRole(controlType);
