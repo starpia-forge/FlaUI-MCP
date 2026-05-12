@@ -17,6 +17,7 @@ public readonly record struct AttachedWindow(
 public class SessionManager : IDisposable
 {
     private const string Win32PopupMenuClass = "#32768";
+    private const string Win32DialogClass = "#32770";
 
     private readonly UIA3Automation _automation;
     private readonly Dictionary<string, Window> _windows = new();
@@ -246,6 +247,57 @@ public class SessionManager : IDisposable
                 return e;
         }
         return null;
+    }
+
+    /// <summary>
+    /// Snapshot HWNDs of all currently-visible Win32 common dialogs (#32770) on the desktop.
+    /// Used as a baseline before triggering an action that may produce a dialog.
+    /// </summary>
+    public HashSet<IntPtr> SnapshotTopLevelDialogs()
+    {
+        var desktop = _automation.GetDesktop();
+        return new HashSet<IntPtr>(
+            desktop
+                .FindAllChildren(cf =>
+                    cf.ByControlType(FlaUI.Core.Definitions.ControlType.Window)
+                      .And(cf.ByClassName(Win32DialogClass)))
+                .Select(e => SafeAccess.Get(() => e.Properties.NativeWindowHandle.ValueOrDefault, IntPtr.Zero))
+                .Where(h => h != IntPtr.Zero));
+    }
+
+    /// <summary>
+    /// Poll the desktop for a new #32770 dialog that wasn't in <paramref name="baseline"/>.
+    /// Returns the dialog element or null if none appears within <paramref name="timeoutMs"/>.
+    /// </summary>
+    public AutomationElement? PollForNewDialog(HashSet<IntPtr> baseline, int timeoutMs)
+    {
+        var deadline = DateTime.UtcNow.AddMilliseconds(timeoutMs);
+        var desktop = _automation.GetDesktop();
+        while (DateTime.UtcNow < deadline)
+        {
+            foreach (var e in desktop.FindAllChildren(cf =>
+                cf.ByControlType(FlaUI.Core.Definitions.ControlType.Window)
+                  .And(cf.ByClassName(Win32DialogClass))))
+            {
+                var hwnd = SafeAccess.Get(() => e.Properties.NativeWindowHandle.ValueOrDefault, IntPtr.Zero);
+                if (hwnd != IntPtr.Zero && !baseline.Contains(hwnd))
+                    return e;
+            }
+            Thread.Sleep(100);
+        }
+        return null;
+    }
+
+    /// <summary>
+    /// Return the first currently-visible #32770 dialog on the desktop, or null.
+    /// Used by windows_dialog when no pre-registered handle is given.
+    /// </summary>
+    public AutomationElement? FindActiveDialog()
+    {
+        var desktop = _automation.GetDesktop();
+        return SafeAccess.Get(() => desktop.FindFirstChild(cf =>
+            cf.ByControlType(FlaUI.Core.Definitions.ControlType.Window)
+              .And(cf.ByClassName(Win32DialogClass))));
     }
 
     public List<(string handle, string title, string? processName)> ListWindows(bool includeHidden = false)

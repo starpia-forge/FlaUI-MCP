@@ -65,7 +65,7 @@ If you use [Claude Code](https://code.claude.com/), install FlaUI-MCP as a plugi
 /plugin install flaui-mcp@flaui-mcp-marketplace
 ```
 
-Claude Code spawns the MCP server automatically. The 31 `windows_*` tools become available in your session immediately.
+Claude Code spawns the MCP server automatically. The 32 `windows_*` tools become available in your session immediately.
 
 **Prerequisite**: .NET 8.0 SDK on `PATH` (the plugin invokes `dotnet run`; the SDK builds the server from source on first launch). If you only have the .NET runtime, use the release-binary install below instead.
 
@@ -185,6 +185,7 @@ Or using `dotnet run`:
 | `windows_tray_invoke` | Click a tray icon by ref (left/right/middle, single or double); right-click auto-registers the context menu as a popup handle |
 | `windows_context_menu` | Right-click an element (or send Shift+F10 / VK_APPS) and register the resulting context menu as a popup handle for `windows_snapshot` |
 | `windows_dismiss_menu` | Send Escape to close an open context menu and remove its popup handle from the registry |
+| `windows_dialog` | Drive Win32 common dialogs (#32770: File Open/Save, message boxes). One call polls for the dialog, optionally fills the path and picks a filter, then invokes Open/Save/OK/Cancel/named button. Auto-registers the dialog as a popup handle. |
 
 ### Flow
 

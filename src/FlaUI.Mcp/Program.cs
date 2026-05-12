@@ -40,6 +40,7 @@ toolRegistry.RegisterTool(new AssertTool(sessionManager, elementRegistry));
 toolRegistry.RegisterTool(new DragTool(sessionManager, elementRegistry));
 toolRegistry.RegisterTool(new ContextMenuTool(sessionManager, elementRegistry));
 toolRegistry.RegisterTool(new DismissMenuTool(sessionManager));
+toolRegistry.RegisterTool(new DialogTool(sessionManager));
 
 // Create and run MCP server
 var server = new McpServer(toolRegistry);
