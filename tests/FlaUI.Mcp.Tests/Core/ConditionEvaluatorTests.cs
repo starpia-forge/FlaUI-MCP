@@ -10,16 +10,21 @@ namespace FlaUI.Mcp.Tests.Core;
 public class ConditionEvaluatorTests
 {
     [Theory]
-    [InlineData("exists",       false)]
-    [InlineData("missing",      true)]
-    [InlineData("visible",      false)]
-    [InlineData("hidden",       true)]
-    [InlineData("enabled",      false)]
-    [InlineData("disabled",     false)]
-    [InlineData("textEquals",   false)]
-    [InlineData("textContains", false)]
-    [InlineData("checked",      false)]
-    [InlineData("unchecked",    false)]
+    [InlineData("exists",            false)]
+    [InlineData("missing",           true)]
+    [InlineData("notExists",         true)]
+    [InlineData("visible",           false)]
+    [InlineData("hidden",            true)]
+    [InlineData("enabled",           false)]
+    [InlineData("disabled",          false)]
+    [InlineData("textEquals",        false)]
+    [InlineData("textContains",      false)]
+    [InlineData("checked",           false)]
+    [InlineData("unchecked",         false)]
+    [InlineData("valueEquals",       false)]
+    [InlineData("expanded",          false)]
+    [InlineData("focused",           false)]
+    [InlineData("selectionContains", false)]
     public void Evaluate_NullElement_ReturnsExpected(string condition, bool expected)
     {
         var (met, observed) = ConditionEvaluator.Evaluate(null, condition, null);
@@ -43,9 +48,10 @@ public class ConditionEvaluatorTests
         var expected = new[]
         {
             "visible", "hidden", "enabled", "disabled",
-            "exists", "missing",
+            "exists", "missing", "notExists",
             "textEquals", "textContains",
-            "checked", "unchecked"
+            "checked", "unchecked",
+            "valueEquals", "expanded", "focused", "selectionContains"
         };
 
         ConditionEvaluator.ValidConditions.Should().BeEquivalentTo(expected);

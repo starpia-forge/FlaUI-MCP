@@ -35,7 +35,7 @@ public class WaitForTool : ToolBase
             {
                 type = "string",
                 @enum = ConditionEvaluator.ValidConditions,
-                description = "Predicate: visible|hidden|enabled|disabled|exists|missing|textEquals|textContains|checked|unchecked"
+                description = "Predicate: visible|hidden|enabled|disabled|exists|missing|notExists|textEquals|textContains|checked|unchecked|valueEquals|expanded|focused|selectionContains"
             },
             @ref = new
             {
@@ -61,7 +61,7 @@ public class WaitForTool : ToolBase
             text = new
             {
                 type = "string",
-                description = "Comparison value for textEquals / textContains conditions."
+                description = "Comparison value for textEquals / textContains / valueEquals / selectionContains conditions."
             },
             timeoutMs = new
             {
@@ -96,7 +96,8 @@ public class WaitForTool : ToolBase
         var selector = arguments.HasValue ? Selector.From(arguments.Value) : default;
 
         var needsElement = condition is "visible" or "enabled" or "disabled"
-                            or "textEquals" or "textContains" or "checked" or "unchecked";
+                            or "textEquals" or "textContains" or "checked" or "unchecked"
+                            or "valueEquals" or "expanded" or "focused" or "selectionContains";
 
         if (needsElement && string.IsNullOrEmpty(refId) &&
             string.IsNullOrEmpty(handle) && selector.IsEmpty)
