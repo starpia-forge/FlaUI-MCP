@@ -18,6 +18,8 @@ toolRegistry.RegisterTool(new ClickTool(sessionManager, elementRegistry));
 toolRegistry.RegisterTool(new TypeTool(sessionManager, elementRegistry));
 toolRegistry.RegisterTool(new FillTool(sessionManager, elementRegistry));
 toolRegistry.RegisterTool(new GetTextTool(sessionManager, elementRegistry));
+toolRegistry.RegisterTool(new GetValueTool(sessionManager, elementRegistry));
+toolRegistry.RegisterTool(new SetValueTool(sessionManager, elementRegistry));
 toolRegistry.RegisterTool(new ScreenshotTool(sessionManager, elementRegistry));
 toolRegistry.RegisterTool(new ListWindowsTool(sessionManager));
 toolRegistry.RegisterTool(new FocusWindowTool(sessionManager));
