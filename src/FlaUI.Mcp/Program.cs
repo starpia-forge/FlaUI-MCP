@@ -14,6 +14,7 @@ toolRegistry.RegisterTool(new TrayListTool(sessionManager, elementRegistry));
 toolRegistry.RegisterTool(new TrayInvokeTool(sessionManager, elementRegistry));
 toolRegistry.RegisterTool(new SnapshotTool(sessionManager, elementRegistry));
 toolRegistry.RegisterTool(new InspectTool(sessionManager, elementRegistry));
+toolRegistry.RegisterTool(new GridCellTool(sessionManager, elementRegistry));
 toolRegistry.RegisterTool(new ClickTool(sessionManager, elementRegistry));
 toolRegistry.RegisterTool(new TypeTool(sessionManager, elementRegistry));
 toolRegistry.RegisterTool(new FillTool(sessionManager, elementRegistry));

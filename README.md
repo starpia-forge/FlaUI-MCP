@@ -65,7 +65,7 @@ If you use [Claude Code](https://code.claude.com/), install FlaUI-MCP as a plugi
 /plugin install flaui-mcp@flaui-mcp-marketplace
 ```
 
-Claude Code spawns the MCP server automatically. The 26 `windows_*` tools become available in your session immediately.
+Claude Code spawns the MCP server automatically. The 27 `windows_*` tools become available in your session immediately.
 
 **Prerequisite**: .NET 8.0 SDK on `PATH` (the plugin invokes `dotnet run`; the SDK builds the server from source on first launch). If you only have the .NET runtime, use the release-binary install below instead.
 
@@ -142,6 +142,7 @@ Or using `dotnet run`:
 | `windows_inspect` | Dump all UIA properties (AutomationId, ClassName, BoundingRect, …) and supported patterns with current state for one element ref |
 | `windows_get_text` | Get text content of an element |
 | `windows_screenshot` | Capture window/element as PNG |
+| `windows_grid_cell` | Access a Grid/Table cell by (row, col) via GridPattern.GetItem; registers the cell as a new ref usable with windows_click, windows_get_value, etc. Works on virtualized data grids. |
 
 ### Values
 
