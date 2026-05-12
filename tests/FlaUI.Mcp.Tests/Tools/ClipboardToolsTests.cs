@@ -19,7 +19,7 @@ public class ClipboardToolsTests
     {
         ClipboardAccessor.WriteText("test-get");
         var result = await _get.ExecuteAsync(null);
-        result.IsError.Should().BeFalse();
+        result.IsError.GetValueOrDefault().Should().BeFalse();
         result.Content[0].Text.Should().Be("test-get");
     }
 
@@ -28,7 +28,7 @@ public class ClipboardToolsTests
     {
         ClipboardAccessor.WriteText("");
         var result = await _get.ExecuteAsync(null);
-        result.IsError.Should().BeFalse();
+        result.IsError.GetValueOrDefault().Should().BeFalse();
         result.Content[0].Text.Should().Contain("empty");
     }
 
@@ -56,7 +56,7 @@ public class ClipboardToolsTests
     {
         var args = JsonDocument.Parse("""{"text":"abc"}""").RootElement;
         var result = await _set.ExecuteAsync(args);
-        result.IsError.Should().BeFalse();
+        result.IsError.GetValueOrDefault().Should().BeFalse();
         result.Content[0].Text.Should().Contain("3 characters");
         ClipboardAccessor.ReadText().Should().Be("abc");
     }
@@ -67,7 +67,7 @@ public class ClipboardToolsTests
         ClipboardAccessor.WriteText("something");
         var args = JsonDocument.Parse("""{"text":""}""").RootElement;
         var result = await _set.ExecuteAsync(args);
-        result.IsError.Should().BeFalse();
+        result.IsError.GetValueOrDefault().Should().BeFalse();
         result.Content[0].Text.Should().Contain("cleared");
         ClipboardAccessor.ReadText().Should().Be("");
     }
