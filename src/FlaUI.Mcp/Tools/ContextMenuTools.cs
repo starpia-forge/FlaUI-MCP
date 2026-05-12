@@ -206,6 +206,9 @@ public class DismissMenuTool : ToolBase
         if (string.IsNullOrEmpty(handle))
             return Task.FromResult(ErrorResult("Missing required argument: handle"));
 
+        if (_session.GetPopup(handle) == null)
+            return Task.FromResult(ErrorResult($"No popup registered for handle: {handle}"));
+
         try
         {
             Keyboard.Press(VirtualKeyShort.ESC);

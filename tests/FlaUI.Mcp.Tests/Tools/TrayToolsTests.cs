@@ -56,7 +56,10 @@ public class TrayToolsTests : IDisposable
     [Fact]
     public async Task TrayList_NoArguments_DoesNotThrow()
     {
-        var args = JsonDocument.Parse("{}").RootElement;
+        // includeOverflow:false avoids opening the user's tray flyout and emitting
+        // Escape during test runs (TrayWalker.ExpandOverflow fires real OS keystrokes).
+        // Overflow expansion is an integration-only concern verified manually.
+        var args = JsonDocument.Parse("""{"includeOverflow":false}""").RootElement;
         // May return empty result if Shell_TrayWnd absent (e.g. Win11 native taskbar)
         // but must NOT throw or return an unhandled exception
         var result = await _list.ExecuteAsync(args);

@@ -76,19 +76,18 @@ public class ContextMenuToolsTests : IDisposable
     }
 
     [Fact]
-    public async Task DismissMenu_NonExistentHandle_Succeeds()
+    public async Task DismissMenu_NonExistentHandle_ReturnsError()
     {
-        // Dismiss of a handle that was never registered should still succeed
-        // (menu may already be dismissed; Escape is sent as best-effort)
         var args = JsonDocument.Parse("""{"handle":"m9999"}""").RootElement;
         var result = await _dismiss.ExecuteAsync(args);
-        result.IsError.GetValueOrDefault().Should().BeFalse();
+        result.IsError.Should().BeTrue();
         result.Content[0].Text.Should().Contain("m9999");
     }
 
     // ── DismissMenuTool clears popup registry ────────────────────────────────
 
     [Fact]
+    [Trait("Category", "Integration")]
     public async Task DismissMenu_ClearsPopupRegistration()
     {
         var desktop = _session.Automation.GetDesktop();

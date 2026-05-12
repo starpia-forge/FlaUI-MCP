@@ -274,6 +274,12 @@ dotnet test FlaUI.Mcp.sln
 
 Unit tests live under `tests/FlaUI.Mcp.Tests/` (xUnit) and cover `ElementRegistry`, `SnapshotBuilder`, `ConditionEvaluator`, and `KeyMap` helpers. The CI workflow runs them automatically for the `win-x64` matrix leg.
 
+Some tests are marked `[Trait("Category", "Integration")]` because they perform real OS input (keyboard/mouse) to exercise production code paths. These are safe to run but will briefly interact with the desktop. Exclude them during headless or focus-sensitive sessions:
+
+```powershell
+dotnet test FlaUI.Mcp.sln --filter "Category!=Integration"
+```
+
 ## Architecture
 
 ```
