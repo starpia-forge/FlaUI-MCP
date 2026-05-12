@@ -1,12 +1,8 @@
 using System.Text.Json;
-using FlaUI.Core.Capturing;
 using FlaUI.Mcp.Core;
 
 namespace FlaUI.Mcp.Tools;
 
-/// <summary>
-/// Take a screenshot
-/// </summary>
 public class ScreenshotTool : ToolBase
 {
     private readonly SessionManager _sessionManager;
@@ -52,32 +48,13 @@ public class ScreenshotTool : ToolBase
         var refId      = GetStringArgument(arguments, "ref");
         var fullScreen = GetBoolArgument(arguments, "fullScreen", false);
 
-        CaptureImage? capture = null;
+        var result = ScreenshotCapturer.Capture(_sessionManager, _elementRegistry, handle, refId, fullScreen);
+        if (result.Error != null)
+            return Task.FromResult(ErrorResult(result.Error));
+
         try
         {
-            if (fullScreen)
-            {
-                capture = Capture.Screen();
-            }
-            else if (!string.IsNullOrEmpty(refId))
-            {
-                var element = _elementRegistry.GetElement(refId);
-                if (element == null)
-                    return Task.FromResult(ErrorResult($"Element not found: {refId}"));
-                capture = Capture.Element(element);
-            }
-            else
-            {
-                var resolution = WindowResolver.ResolveOrFocused(_sessionManager, handle, registerFocused: false);
-                if (resolution.Failure == WindowResolutionFailure.HandleNotFound)
-                    return Task.FromResult(ErrorResult($"Window not found: {handle}"));
-                if (resolution.Failure == WindowResolutionFailure.NoFocusedElement)
-                    return Task.FromResult(ErrorResult("No focused window found"));
-                if (resolution.Failure == WindowResolutionFailure.NoWindowAncestor)
-                    return Task.FromResult(ErrorResult("Could not find window for focused element"));
-                capture = Capture.Element(resolution.Window!);
-            }
-
+            using var capture = result.Image!;
             using var stream = new MemoryStream();
             capture.Bitmap.Save(stream, System.Drawing.Imaging.ImageFormat.Png);
             return Task.FromResult(ImageResult(stream.ToArray(), "image/png"));
@@ -85,10 +62,6 @@ public class ScreenshotTool : ToolBase
         catch (Exception ex)
         {
             return Task.FromResult(ErrorResult($"Failed to capture screenshot: {ex.Message}"));
-        }
-        finally
-        {
-            capture?.Dispose();
         }
     }
 }

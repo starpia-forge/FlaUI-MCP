@@ -5,6 +5,7 @@ using FlaUI.Mcp.Tools;
 // Create shared services
 var sessionManager = new SessionManager();
 var elementRegistry = new ElementRegistry();
+var screenshotCache = new ScreenshotCache();
 
 // Register all tools
 var toolRegistry = new ToolRegistry();
@@ -25,6 +26,7 @@ toolRegistry.RegisterTool(new GetClipboardTool());
 toolRegistry.RegisterTool(new SetClipboardTool());
 toolRegistry.RegisterTool(new FocusedElementTool(sessionManager, elementRegistry));
 toolRegistry.RegisterTool(new ScreenshotTool(sessionManager, elementRegistry));
+toolRegistry.RegisterTool(new ScreenshotDiffTool(sessionManager, elementRegistry, screenshotCache));
 toolRegistry.RegisterTool(new ListWindowsTool(sessionManager));
 toolRegistry.RegisterTool(new FocusWindowTool(sessionManager));
 toolRegistry.RegisterTool(new CloseWindowTool(sessionManager));
