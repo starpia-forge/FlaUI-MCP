@@ -1,13 +1,15 @@
 # FlaUI-MCP
 
+> 🟢 **Actively maintained hard fork** of [shanselman/FlaUI-MCP](https://github.com/shanselman/FlaUI-MCP).
+> Adds Claude Code plugin install, win-arm64 builds, auto-wait/retry, HWND-based
+> window detection (UWP + localized titles), GDI leak fixes, and MCP spec compliance.
+
 An MCP (Model Context Protocol) server that enables AI agents to automate Windows desktop applications using accessibility APIs - the same way Playwright automates browsers.
 
 [![CI](https://github.com/starpia-forge/FlaUI-MCP/actions/workflows/build.yml/badge.svg)](https://github.com/starpia-forge/FlaUI-MCP/actions/workflows/build.yml)
 [![CD](https://github.com/starpia-forge/FlaUI-MCP/actions/workflows/release.yml/badge.svg)](https://github.com/starpia-forge/FlaUI-MCP/actions/workflows/release.yml)
 [![GitHub release](https://img.shields.io/github/v/release/starpia-forge/FlaUI-MCP)](https://github.com/starpia-forge/FlaUI-MCP/releases)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
-
-> **Fork notice** — This repository is a fork of [shanselman/FlaUI-MCP](https://github.com/shanselman/FlaUI-MCP). It diverges from upstream with stability fixes (HWND-based window detection for UWP and localized titles, auto-wait/retry executor, handle/GDI leak fixes, JSON-RPC 2.0 / MCP spec compliance), a multi-arch CI/CD pipeline (win-x64 + win-arm64) driven by semantic-release, and an xUnit test suite. See [Changes from upstream](#changes-from-upstream) for details.
 
 ## Why This Exists
 
